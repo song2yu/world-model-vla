@@ -193,7 +193,7 @@
   <p>涵盖 Transformer · 训练范式 · 推理优化 · 视觉生成 · 多模态 · 系统设计 · 强化学习 · 代码题</p>
   <div class="stats">
     <div class="stat"><div class="n">130+</div><div class="label">面试题</div></div>
-    <div class="stat"><div class="n">10</div><div class="label">核心模块</div></div>
+    <div class="stat"><div class="n">17</div><div class="label">核心模块</div></div>
     <div class="stat"><div class="n">2025</div><div class="label">最新版本</div></div>
   </div>
 </header>
@@ -209,6 +209,13 @@
   <a href="#s8">代码题</a>
   <a href="#s9">强化学习</a>
   <a href="#s10">损失函数</a>
+  <a href="#s11">数据工程</a>
+  <a href="#s12">长上下文</a>
+  <a href="#s13">多模态深入</a>
+  <a href="#s14">安全对齐</a>
+  <a href="#s15">推理计算</a>
+  <a href="#s16">训练工程</a>
+  <a href="#s17">高效部署</a>
 </nav>
 
 <main>
@@ -2049,6 +2056,2025 @@ $$\mathcal{L}_G=-\mathbb{E}_z[D(G(z))]$$</div>
 
 </section>
 
+<!-- ═══════════════════════════════════
+     SECTION 11 — 数据工程与合成数据
+════════════════════════════════════ -->
+<section id="s11">
+<div class="section-title"><span class="section-icon">🗃️</span>十一、数据工程与合成数据</div>
+
+<!-- D1 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">D1</div>
+    <div>
+      <div class="q-text">合成数据的主流方法有哪些？Self-Instruct 和 Evol-Instruct 的区别？</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">数据</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>Self-Instruct（Wang et al. 2023）：</strong></p>
+    <ol>
+      <li>从种子指令集（175 条）出发</li>
+      <li>用 LLM 生成新指令 → 生成对应输入/输出</li>
+      <li>过滤低质量/重复数据，扩充指令池</li>
+      <li>循环迭代，最终得到数万条指令数据</li>
+    </ol>
+    <p><strong>Evol-Instruct（WizardLM）：</strong></p>
+    <ol>
+      <li>对已有指令做“进化”操作：加深（更复杂推理）、加宽（更多约束条件）、改写（换领域/场景）</li>
+      <li>每轮进化后用 LLM 筛选质量，淘汰退化样本</li>
+      <li>逐轮迭代，生成从简单到复杂的梯度数据</li>
+    </ol>
+    <table>
+      <tr><th></th><th>Self-Instruct</th><th>Evol-Instruct</th></tr>
+      <tr><td>核心思路</td><td>从种子扩展新指令</td><td>对已有指令做复杂度进化</td></tr>
+      <tr><td>数据多样性</td><td>高（广度优先）</td><td>中（深度优先）</td></tr>
+      <tr><td>数据难度</td><td>随机</td><td>渐进式提升</td></tr>
+      <tr><td>代表</td><td>Alpaca</td><td>WizardLM、WizardCoder</td></tr>
+    </table>
+    <div class="tip">💡 2024-2025 趋势：数据飞轮（Data Flywheel）—— 用模型自身输出 + 验证器筛选循环迭代，持续提升数据质量。</div>
+  </div></div>
+</div>
+
+<!-- D2 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">D2</div>
+    <div>
+      <div class="q-text">预训练数据的配比策略？不同领域/语言如何分配比例？</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">数据</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>核心原则：</strong>数据配比直接影响模型能力分布，需要根据目标能力精心设计。</p>
+    <p><strong>典型配比（参考 LLaMA/Qwen 技术报告）：</strong></p>
+    <table>
+      <tr><th>数据源</th><th>占比</th><th>作用</th></tr>
+      <tr><td>网页文本（CC）</td><td>60~70%</td><td>通用语言能力</td></tr>
+      <tr><td>代码</td><td>10~15%</td><td>推理能力、结构化输出</td></tr>
+      <tr><td>学术论文/书籍</td><td>5~10%</td><td>知识密度</td></tr>
+      <tr><td>百科/知识库</td><td>5%</td><td>事实性</td></tr>
+      <tr><td>对话/社交</td><td>3~5%</td><td>对话能力</td></tr>
+      <tr><td>数学</td><td>3~5%</td><td>数学推理</td></tr>
+    </table>
+    <p><strong>多语言配比策略：</strong></p>
+    <ul>
+      <li><em>按比例采样</em>：按各语言语料量的 α 次方重采样（α=0.3~0.7），平衡大语种和小语种</li>
+      <li><em>温度采样</em>：$P(l) \propto n_l^{1/T}$，T 越大分布越均匀</li>
+      <li><em>多阶段</em>：先大量英文训练，后期增加目标语言比例（annealing）</li>
+    </ul>
+    <div class="tip">💡 关键发现：代码数据比例提升能显著增强模型的逻辑推理和指令遵循能力（即使非代码任务也受益）。</div>
+  </div></div>
+</div>
+
+<!-- D3 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">D3</div>
+    <div>
+      <div class="q-text">课程学习（Curriculum Learning）在大模型训练中如何应用？</div>
+      <div class="q-tags"><span class="tag">数据</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>核心思想：</strong>按“从易到难”或“从通用到专精”的顺序安排训练数据，模拟人类学习过程。</p>
+    <p><strong>在 LLM 中的应用形式：</strong></p>
+    <ul>
+      <li><strong>数据质量递进</strong>：前期用大量低质量数据学通用模式，后期用高质量数据精炼（LLaMA 3 的“annealing”阶段上采样高质数据）</li>
+      <li><strong>难度递进</strong>：先短序列后长序列（节省计算）；先简单任务后复杂任务</li>
+      <li><strong>领域递进</strong>：先通用 → 后专业领域 → 最后指令数据</li>
+      <li><strong>数据重放</strong>：周期性回放早期数据防止灾难性遗忘</li>
+    </ul>
+    <p><strong>实践案例：</strong></p>
+    <ul>
+      <li>GPT-4 使用多阶段训练（不同阶段数据质量和难度递增）</li>
+      <li>DeepSeek-V3 在预训练末期用 1.5T 高质量 token 做 annealing</li>
+      <li>代码模型先学自然语言再学代码（Codex 路线）</li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- D4 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">D4</div>
+    <div>
+      <div class="q-text">数据污染（Data Contamination）如何检测和处理？</div>
+      <div class="q-tags"><span class="tag">数据</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>什么是数据污染：</strong>测试集（benchmark）的数据出现在预训练语料中，导致评估结果虚高。</p>
+    <p><strong>检测方法：</strong></p>
+    <ul>
+      <li><strong>N-gram 匹配</strong>：检查训练语料中是否包含 benchmark 的 8-gram 或更长连续片段</li>
+      <li><strong>Perplexity 分析</strong>：对 benchmark 样本计算困惑度，异常低的说明可能见过</li>
+      <li><strong>Membership Inference</strong>：用模型自身判断是否“记住”了某个样本</li>
+      <li><strong>Canary 方法</strong>：在训练集中插入特殊标记，检查模型是否能复现</li>
+    </ul>
+    <p><strong>处理方法：</strong></p>
+    <ul>
+      <li>训练前：对所有已知 benchmark 做去重清洗（LLaMA 3 报告了完整去污流程）</li>
+      <li>评估时：使用动态/私有测试集（如 LiveCodeBench、SimpleQA）</li>
+      <li>发布时：明确报告去污方法和残留污染比例</li>
+    </ul>
+    <div class="warn">⚠️ GPT-4 技术报告指出即使严格去污，互联网数据中仍可能有间接泄露（改写、翻译等形式）。</div>
+  </div></div>
+</div>
+
+<!-- D5 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">D5</div>
+    <div>
+      <div class="q-text">多模态数据对齐的质量如何保证？图文配对有哪些挑战？</div>
+      <div class="q-tags"><span class="tag">数据</span><span class="tag">多模态</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>挑战：</strong></p>
+    <ul>
+      <li><em>alt-text 质量差</em>：网络图片的 alt 描述往往很短或不准确</li>
+      <li><em>图文相关性低</em>：很多网页图文只是共现，并非真正描述关系</li>
+      <li><em>细粒度描述缺失</em>：缺少空间关系、计数、属性等详细描述</li>
+    </ul>
+    <p><strong>解决方案：</strong></p>
+    <ul>
+      <li><strong>CLIP score 过滤</strong>：用 CLIP 计算图文相似度，过滤低分样本（DataComp）</li>
+      <li><strong>重新标注（Recaptioning）</strong>：用大模型（如 LLaVA/CogVLM）为图片生成高质量长描述</li>
+      <li><strong>分层数据策略</strong>：
+        <br>- 阶段一：大量粗粒度图文对（LAION-5B 级别）学基础对齐
+        <br>- 阶段二：精细图文对（ShareGPT4V、ALLaVA）学细粒度理解
+      </li>
+      <li><strong>合成数据</strong>：用渲染引擎/扩散模型生成带精确标注的图像</li>
+    </ul>
+    <div class="tip">💡 InternVL 2 使用动态分辨率 + 高质量重标注数据，在多个 benchmark 上超越 GPT-4V。</div>
+  </div></div>
+</div>
+
+</section>
+
+<section id="s12">
+  <h2>Section 12 — 长上下文与记忆机制</h2>
+
+  <!-- Q1 -->
+  <div class="card">
+    <h3>Q1: 长上下文外推技术有哪些？YaRN/NTK-Aware/ABF 的原理？</h3>
+    <p><strong>位置编码外推问题：</strong>基于 RoPE 的模型在训练长度 L 内学习了位置编码，当推理序列长度 L' &gt; L 时，超出训练分布的位置编码会导致注意力分数异常，模型性能急剧下降。核心挑战是如何让模型在不重新训练的情况下处理更长序列。</p>
+
+    <h4>NTK-Aware Scaling</h4>
+    <p>核心思想：不直接对位置进行线性插值（会损失高频信息），而是修改 RoPE 的 base frequency，使得高频维度几乎不变、低频维度被压缩。</p>
+    <div class="formula">
+      θ'_i = θ_i · α^(-2i/d)<br>
+      其中 α = (L'/L)^(d/(d-2))，base' = base · α
+    </div>
+    <p class="tip">💡 NTK-Aware 的优势在于无需微调即可获得一定外推能力，是 "free lunch" 方案的代表。</p>
+
+    <h4>YaRN（Yet another RoPE extensioN）</h4>
+    <p>分频段处理策略，将 RoPE 的频率维度分为三个区间：</p>
+    <ul>
+      <li><strong>低频维度（波长 &gt; 训练长度）：</strong>线性插值（Position Interpolation）</li>
+      <li><strong>高频维度（波长 &lt;&lt; 训练长度）：</strong>保持不变，无需外推</li>
+      <li><strong>中频维度：</strong>NTK 混合插值，平滑过渡</li>
+    </ul>
+    <p>同时引入温度缩放因子 √(1/t) 修正注意力熵的增大问题。</p>
+
+    <h4>ABF（Adjusted Base Frequency）</h4>
+    <p>DeepSeek 采用的动态调整方案：根据目标长度直接调整 RoPE 的 base 参数，配合少量长序列数据微调。</p>
+    <div class="formula">
+      base_new = base × (target_len / train_len)^(dim / (dim - 2))
+    </div>
+
+    <h4>Position Interpolation（PI）基础公式</h4>
+    <div class="formula">
+      f(x, m) → f(x, m · L/L')<br>
+      将位置 m 线性缩放到训练长度范围内：m' = m · (L / L')
+    </div>
+    <p class="warn">⚠️ 纯线性插值（PI）会压缩所有频率维度，导致高频位置信息丢失，近距离 token 的区分度下降。这正是 NTK/YaRN 改进的出发点。</p>
+
+    <table class="table">
+      <thead>
+        <tr><th>方法</th><th>核心策略</th><th>是否需要微调</th><th>外推倍数</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Position Interpolation</td><td>位置线性缩放</td><td>需少量微调</td><td>2-4×</td></tr>
+        <tr><td>NTK-Aware</td><td>修改 base frequency</td><td>无需微调</td><td>2-4×</td></tr>
+        <tr><td>YaRN</td><td>分频段 + 温度修正</td><td>少量微调效果更好</td><td>4-64×</td></tr>
+        <tr><td>ABF</td><td>动态 base 调整</td><td>需配合长序列训练</td><td>4-128×</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Q2 -->
+  <div class="card">
+    <h3>Q2: Ring Attention 和 Striped Attention 的原理？如何实现分布式长序列训练？</h3>
+
+    <h4>序列并行的核心挑战</h4>
+    <p>标准 Self-Attention 需要每个 token 与所有其他 token 交互，当序列长度 N 极大时，单设备无法容纳完整的 KV 矩阵。序列并行（Sequence Parallelism）需要解决：</p>
+    <ul>
+      <li>内存瓶颈：KV cache 随序列长度线性增长</li>
+      <li>计算依赖：注意力计算需全局 KV 信息</li>
+      <li>通信开销：设备间传输 KV 块的带宽成本</li>
+    </ul>
+
+    <h4>Ring Attention</h4>
+    <p>核心思想：将序列分为 P 个块（P = 设备数），每个设备持有一个 Q 块，KV 块在设备间以环形拓扑（Ring）传递。</p>
+    <ul>
+      <li>每个设备固定存储自己的 Q 块（Query）</li>
+      <li>KV 块沿环形方向逐步传递，每步计算当前 Q 与收到的 KV 块的局部注意力</li>
+      <li>使用 Online Softmax（Flash Attention 思路）逐步累积注意力结果</li>
+      <li>经过 P-1 步传递后，每个设备获得完整注意力输出</li>
+    </ul>
+    <div class="formula">
+      设备 i 在第 t 步：<br>
+      Attention_partial(Q_i, K_{(i+t)%P}, V_{(i+t)%P})<br>
+      通过 log-sum-exp 合并所有 partial results
+    </div>
+
+    <h4>Striped Attention</h4>
+    <p>Ring Attention 的改进方案，解决因果注意力（Causal Mask）下的负载不均衡问题：</p>
+    <ul>
+      <li><strong>问题：</strong>在 causal mask 下，靠前的 Q 块只能看到很少的 KV，靠后的 Q 块要看全部 KV，导致计算量不均</li>
+      <li><strong>解决：</strong>将序列按 striped（条纹）方式分片 — token i 分配到设备 i % P</li>
+      <li>这样每个设备持有的 token 在序列中均匀分布，保证每个设备的有效计算量接近相等</li>
+    </ul>
+
+    <h4>通信与计算重叠</h4>
+    <p>关键优化：在计算当前 KV 块的注意力时，同时异步发送/接收下一个 KV 块（double buffering），使通信延迟被计算掩盖。</p>
+    <div class="formula">
+      有效吞吐 ≈ max(T_compute, T_communicate)<br>
+      当 T_compute ≥ T_communicate 时，通信完全被掩盖
+    </div>
+    <p class="tip">💡 Ring Attention + Flash Attention 的组合使得理论上可以训练任意长序列，内存开销与设备数成反比：O(N/P) per device。</p>
+  </div>
+
+  <!-- Q3 -->
+  <div class="card">
+    <h3>Q3: 稀疏注意力的主流模式？Sliding Window + Global tokens 如何工作？</h3>
+
+    <h4>Longformer / BigBird 模式</h4>
+    <p>经典稀疏注意力的三种组合模式：</p>
+    <ul>
+      <li><strong>Local Window：</strong>每个 token 只关注周围 w 个 token（滑动窗口）</li>
+      <li><strong>Global Tokens：</strong>指定若干 token（如 [CLS]）可关注/被关注所有位置</li>
+      <li><strong>Random Attention（BigBird）：</strong>每个 token 额外随机关注 r 个位置，增加远程连接</li>
+    </ul>
+    <div class="formula">
+      复杂度：O(N × (w + g + r)) 其中 w=窗口大小, g=全局token数, r=随机连接数<br>
+      相比 Full Attention O(N²)，当 w+g+r ≪ N 时显著降低
+    </div>
+
+    <h4>Mistral 的 Sliding Window Attention（SWA）</h4>
+    <p>Mistral 7B 采用的简洁方案：</p>
+    <ul>
+      <li>窗口大小 W=4096，每层只关注最近 W 个 token</li>
+      <li>多层堆叠后，感受野随层数线性增长：第 k 层理论感受野 = k × W</li>
+      <li>32 层 × 4096 窗口 = 131K 有效感受野</li>
+      <li>KV Cache 大小固定为 W，不随序列增长</li>
+    </ul>
+
+    <h4>StreamingLLM 与 Attention Sink</h4>
+    <p><strong>Attention Sink 现象：</strong>即使在超长序列中，模型对最前面几个 token（尤其是第一个 token）始终分配较高注意力权重，无论这些 token 的语义内容如何。</p>
+    <ul>
+      <li>原因：Softmax 需要一个"垃圾桶"来放置不需要的注意力概率质量</li>
+      <li><strong>StreamingLLM 策略：</strong>保留前 k 个 Sink Tokens + 最近的 Window Tokens</li>
+      <li>支持无限长度流式推理，KV Cache 大小恒定</li>
+    </ul>
+    <div class="formula">
+      StreamingLLM Cache = [Sink Tokens (前4个)] + [Recent Window (最近 W 个)]<br>
+      总缓存大小固定为 4 + W，与输入长度无关
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr><th>方法</th><th>复杂度</th><th>有效感受野</th><th>适用场景</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Full Attention</td><td>O(N²)</td><td>N</td><td>短序列</td></tr>
+        <tr><td>Sliding Window</td><td>O(N·W)</td><td>k·W（多层）</td><td>通用长文本</td></tr>
+        <tr><td>Longformer</td><td>O(N·(W+G))</td><td>N（通过 Global）</td><td>文档理解</td></tr>
+        <tr><td>StreamingLLM</td><td>O(N·W)</td><td>W + Sink</td><td>无限流式推理</td></tr>
+      </tbody>
+    </table>
+    <p class="warn">⚠️ 稀疏注意力模式可能丢失关键的远程依赖信息。对于需要全局推理的任务（如数学证明、长距离共指消解），纯稀疏方案效果有限。</p>
+  </div>
+
+  <!-- Q4 -->
+  <div class="card">
+    <h3>Q4: 外部记忆增强 vs 长上下文：各自的优劣？</h3>
+
+    <h4>RAG vs 长上下文的 Trade-off</h4>
+    <table class="table">
+      <thead>
+        <tr><th>维度</th><th>RAG（外部记忆）</th><th>长上下文窗口</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>信息容量</td><td>理论无限（外部存储）</td><td>受窗口大小限制（128K-1M）</td></tr>
+        <tr><td>检索精度</td><td>依赖检索器质量，可能遗漏</td><td>全部信息在上下文内，无遗漏</td></tr>
+        <tr><td>推理成本</td><td>低（只送相关片段）</td><td>高（长序列 O(N²) 或 O(N·W)）</td></tr>
+        <tr><td>实时性</td><td>可随时更新外部库</td><td>需重新构建上下文</td></tr>
+        <tr><td>多跳推理</td><td>困难（需多轮检索）</td><td>天然支持（信息共存）</td></tr>
+        <tr><td>部署复杂度</td><td>需向量数据库 + 检索管线</td><td>简单，只需长窗口模型</td></tr>
+      </tbody>
+    </table>
+
+    <h4>长期记忆方案</h4>
+    <ul>
+      <li><strong>MemoryBank：</strong>为每个用户/对话维护动态记忆库，通过遗忘曲线模拟人类记忆衰减，定期整合与遗忘</li>
+      <li><strong>MemWalker：</strong>将长文本构建为树状记忆结构，通过 LLM 自主导航（walk）在记忆树中检索相关信息</li>
+      <li><strong>Memorizing Transformers：</strong>引入 kNN 检索层，在注意力计算中融合外部记忆库的 KV 对</li>
+    </ul>
+
+    <h4>上下文压缩技术</h4>
+    <ul>
+      <li><strong>Gisting：</strong>将长 prompt 压缩为少量 "gist tokens"，通过训练让模型学会从 gist tokens 恢复原始信息</li>
+      <li><strong>AutoCompressor：</strong>递归压缩 — 将前文压缩为 summary vectors，与新文本拼接后再次压缩，支持无限长度</li>
+      <li><strong>ICAE（In-Context Autoencoder）：</strong>用 LoRA 微调将长上下文编码为固定数量的 memory tokens</li>
+    </ul>
+    <div class="formula">
+      压缩比 = 原始 token 数 / 压缩后 token 数<br>
+      Gisting 典型压缩比: 10-26×<br>
+      AutoCompressor: 每段压缩为固定 k 个 summary tokens
+    </div>
+
+    <h4>何时选 RAG vs 长窗口？</h4>
+    <p class="tip">💡 决策框架：<br>
+    • 知识库 &gt; 1M tokens 且频繁更新 → RAG<br>
+    • 单文档/对话 &lt; 128K 且需要精确推理 → 长窗口<br>
+    • 需要多跳推理 + 大量背景知识 → 长窗口 + RAG 混合<br>
+    • 成本敏感场景 → RAG（只检索相关片段，省 tokens）</p>
+  </div>
+
+  <!-- Q5 -->
+  <div class="card">
+    <h3>Q5: KV Cache 压缩技术有哪些？如何在不损失精度的情况下减少缓存？</h3>
+
+    <h4>Token Eviction（淘汰策略）</h4>
+    <ul>
+      <li><strong>H2O（Heavy-Hitter Oracle）：</strong>基于累积注意力分数识别"重要 token"，只保留 Heavy Hitters + 最近的 Local tokens，淘汰中间低分 token</li>
+      <li><strong>ScissorHands：</strong>观察到"重要 token 在不同层/头中保持一致"（Persistence of Importance），据此做跨层联合淘汰决策</li>
+      <li><strong>FastGen：</strong>针对不同注意力头采用不同压缩策略（有的头需要全局，有的只需局部）</li>
+    </ul>
+    <div class="formula">
+      H2O 缓存策略：KV_cache = Top-k(累积注意力分数) ∪ Recent(最近 w 个 token)<br>
+      保留比例典型值：20%-40% 即可保持 95%+ 精度
+    </div>
+
+    <h4>KV Quantization（量化）</h4>
+    <ul>
+      <li>对 KV Cache 中的 Key/Value 矩阵进行低精度量化（FP16 → INT8/INT4）</li>
+      <li><strong>KIVI：</strong>Key 用 per-channel 量化（沿 head_dim 维度），Value 用 per-token 量化（沿 seq_len 维度）</li>
+      <li><strong>KVQuant：</strong>结合 Non-Uniform Quantization + 残差异常值处理</li>
+      <li>内存节省：INT4 量化可节省 75% KV Cache 内存</li>
+    </ul>
+
+    <h4>KV Merge / Pooling（合并）</h4>
+    <ul>
+      <li>将相邻或相似 token 的 KV 向量合并（average pooling / weighted merge）</li>
+      <li><strong>D2O（Dynamic Token Pruning with Merging）：</strong>淘汰低分 token 前先将其信息合并到邻近保留 token 中</li>
+      <li><strong>CaM（Cache Merging）：</strong>基于 token 相似度做聚类合并</li>
+      <li>优势：比单纯淘汰更好地保留全局信息</li>
+    </ul>
+
+    <h4>Shared KV（结构层面的 KV 压缩）</h4>
+    <table class="table">
+      <thead>
+        <tr><th>方法</th><th>KV Head 数</th><th>参数量</th><th>KV Cache 大小</th><th>效果</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>MHA（Multi-Head）</td><td>h 个独立 KV Head</td><td>最大</td><td>O(h·d·N)</td><td>基线</td></tr>
+        <tr><td>MQA（Multi-Query）</td><td>1 个共享 KV Head</td><td>最小</td><td>O(d·N)</td><td>速度快，质量略降</td></tr>
+        <tr><td>GQA（Grouped-Query）</td><td>g 组（1&lt;g&lt;h）</td><td>中等</td><td>O(g·d·N)</td><td>速度与质量平衡</td></tr>
+        <tr><td>MLA（Multi-head Latent）</td><td>压缩为低秩 latent</td><td>中等</td><td>O(c·N), c≪h·d</td><td>DeepSeek-V2 方案</td></tr>
+      </tbody>
+    </table>
+    <div class="formula">
+      MLA 核心：KV 压缩为低秩表示<br>
+      c_t = W_DKV · x_t （下投影，c_t 维度远小于 K+V 拼接维度）<br>
+      K_t, V_t = W_UK · c_t, W_UV · c_t （上投影恢复）<br>
+      缓存只需存 c_t，压缩比 = (d_k + d_v) / d_c ≈ 4-8×
+    </div>
+    <p class="tip">💡 实践建议：多种技术可组合使用。例如 GQA（结构）+ INT4 量化 + H2O 淘汰 三管齐下，可将 KV Cache 压缩 10-20× 而精度损失 &lt; 1%。</p>
+    <p class="warn">⚠️ Token Eviction 策略在需要"回看"早期信息的任务（如长文档 QA、代码补全引用远处定义）中可能导致关键信息被淘汰。建议结合任务特性选择压缩方案。</p>
+  </div>
+</section>
+
+<section id="s13">
+  <h2>13. 多模态模型深入</h2>
+
+  <!-- Q1 -->
+  <div class="card">
+    <div class="q-num">Q1</div>
+    <div class="q-text">视觉 Tokenizer 的原理？VQVAE / VQGAN 的区别？</div>
+    <div class="q-tags"><span>视觉Tokenizer</span><span>VQVAE</span><span>VQGAN</span><span>离散化</span></div>
+    <details>
+      <summary class="chevron">展开答案</summary>
+      <div class="answer-inner">
+        <p><strong>VQVAE 核心流程：</strong>Encoder → 量化到码本（codebook）→ Decoder 重建图像</p>
+
+        <div class="formula">
+          z_q = argmin<sub>e<sub>k</sub>∈Codebook</sub> ‖z_e − e_k‖₂
+        </div>
+
+        <p class="tip">💡 量化操作是离散的（argmin），不可微分。训练时使用 <strong>Straight-Through Estimator (STE)</strong>：前向走量化路径，反向直接将梯度复制给 encoder 输出。</p>
+
+        <p><strong>VQGAN 改进：</strong></p>
+        <ul>
+          <li>在 VQVAE 基础上加入 <strong>PatchGAN 判别器</strong>（对抗训练）</li>
+          <li>引入 <strong>感知损失</strong>（Perceptual Loss，基于 VGG 特征距离）</li>
+          <li>重建质量显著提升，生成图像更锐利、细节更丰富</li>
+        </ul>
+
+        <p><strong>应用：</strong></p>
+        <ul>
+          <li><strong>LlamaGen</strong>：用离散视觉 token 做自回归图像生成，与文本 token 统一建模</li>
+          <li><strong>Chameleon (Meta)</strong>：统一图文 token 空间，实现真正的 any-to-any 生成</li>
+        </ul>
+
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>特性</th>
+                <th>VQVAE</th>
+                <th>VQGAN</th>
+                <th>dVAE (DALL·E)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>量化方式</td>
+                <td>最近邻码本查找</td>
+                <td>最近邻码本查找</td>
+                <td>Gumbel-Softmax 松弛</td>
+              </tr>
+              <tr>
+                <td>判别器</td>
+                <td>❌ 无</td>
+                <td>✅ PatchGAN</td>
+                <td>❌ 无</td>
+              </tr>
+              <tr>
+                <td>感知损失</td>
+                <td>❌ 无</td>
+                <td>✅ VGG-based</td>
+                <td>❌ 无</td>
+              </tr>
+              <tr>
+                <td>重建质量</td>
+                <td>中等（模糊）</td>
+                <td>高（锐利）</td>
+                <td>中等</td>
+              </tr>
+              <tr>
+                <td>梯度处理</td>
+                <td>STE</td>
+                <td>STE</td>
+                <td>Gumbel-Softmax（可微）</td>
+              </tr>
+              <tr>
+                <td>典型应用</td>
+                <td>特征学习</td>
+                <td>LlamaGen / Parti</td>
+                <td>DALL·E 1</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="warn">⚠️ 码本坍塌（Codebook Collapse）是常见问题：只有少数 code 被使用。缓解方法包括 EMA 更新、码本重置、更大码本 + 分组量化。</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q2 -->
+  <div class="card">
+    <div class="q-num">Q2</div>
+    <div class="q-text">Unified 多模态模型 vs 拼接式架构？Gemini / GPT-4o 的设计理念？</div>
+    <div class="q-tags"><span>多模态架构</span><span>Gemini</span><span>GPT-4o</span><span>LLaVA</span></div>
+    <details>
+      <summary class="chevron">展开答案</summary>
+      <div class="answer-inner">
+        <p><strong>拼接式架构（LLaVA 类）：</strong></p>
+        <ul>
+          <li>独立的 Vision Encoder（如 CLIP ViT）提取视觉特征</li>
+          <li>Projection Layer（MLP / Q-Former）将视觉特征映射到 LLM 的 embedding 空间</li>
+          <li>LLM 接收文本 + 投影后的视觉 token 做序列建模</li>
+          <li>各模块可独立预训练，组装灵活</li>
+        </ul>
+
+        <p><strong>原生多模态架构（Gemini）：</strong></p>
+        <ul>
+          <li>从预训练阶段就混合所有模态（文本、图像、音频、视频）</li>
+          <li>模型内部天然理解跨模态关系，无需额外对齐阶段</li>
+          <li>训练成本极高，但跨模态推理能力更强</li>
+        </ul>
+
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>维度</th>
+                <th>拼接式（LLaVA / InternVL）</th>
+                <th>原生多模态（Gemini / GPT-4o）</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>训练成本</td>
+                <td>较低（复用已有模型）</td>
+                <td>极高（从头混合训练）</td>
+              </tr>
+              <tr>
+                <td>跨模态推理</td>
+                <td>受限于投影层瓶颈</td>
+                <td>深度融合，推理更自然</td>
+              </tr>
+              <tr>
+                <td>模态扩展</td>
+                <td>加 encoder 即可扩展</td>
+                <td>需重新预训练</td>
+              </tr>
+              <tr>
+                <td>信息损失</td>
+                <td>投影时可能丢失细节</td>
+                <td>端到端保留</td>
+              </tr>
+              <tr>
+                <td>开源友好</td>
+                <td>✅ 容易复现</td>
+                <td>❌ 难以复现</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p><strong>Any-to-Any 生成（GPT-4o）：</strong></p>
+        <ul>
+          <li>单一模型同时支持文本、图像、音频的输入和输出</li>
+          <li>实时语音对话（无需 ASR → LLM → TTS 管线）</li>
+          <li>可感知语气、情感、环境音，响应延迟极低（~320ms）</li>
+        </ul>
+
+        <p class="tip">💡 趋势：学术界倾向拼接式（低成本迭代），工业界顶级模型走向原生多模态（性能上限更高）。</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q3 -->
+  <div class="card">
+    <div class="q-num">Q3</div>
+    <div class="q-text">音频模态：Whisper 架构 / 音频 Tokenization / TTS 训练</div>
+    <div class="q-tags"><span>Whisper</span><span>音频Tokenization</span><span>TTS</span><span>语音合成</span></div>
+    <details>
+      <summary class="chevron">展开答案</summary>
+      <div class="answer-inner">
+        <p><strong>Whisper 架构：</strong></p>
+        <ul>
+          <li><strong>结构：</strong>标准 Encoder-Decoder Transformer</li>
+          <li><strong>输入：</strong>80-channel Mel spectrogram（30s 音频窗口）</li>
+          <li><strong>多任务训练：</strong>语音识别、语种检测、时间戳预测、翻译，通过特殊 token 切换任务</li>
+          <li><strong>数据：</strong>68 万小时弱监督数据，覆盖 99 种语言</li>
+        </ul>
+
+        <p><strong>音频离散化（Neural Audio Codec）：</strong></p>
+        <ul>
+          <li><strong>SoundStream / EnCodec：</strong>将连续音频波形编码为离散 token 序列</li>
+          <li><strong>核心技术 — 残差向量量化（RVQ）：</strong></li>
+        </ul>
+
+        <div class="formula">
+          RVQ: x → q₁(x) → q₂(x − q̂₁) → q₃(x − q̂₁ − q̂₂) → ...
+          <br>每层量化残差，多层叠加逼近原始信号
+        </div>
+
+        <ul>
+          <li>EnCodec：8 层 RVQ，每层 1024 码本 → 1.5kbps~24kbps 可变码率</li>
+          <li>第 1 层捕获语义/内容信息，后续层补充声学细节（音色、韵律）</li>
+        </ul>
+
+        <p><strong>TTS Pipeline（现代方案）：</strong></p>
+        <ul>
+          <li>文本 → 语义 Token（如 HuBERT 提取） → 声学 Token（EnCodec RVQ）→ 波形（Codec Decoder）</li>
+          <li>语言模型在 token 层做生成，避免直接预测连续波形</li>
+        </ul>
+
+        <p><strong>代表工作：</strong></p>
+        <ul>
+          <li><strong>VALL-E (Microsoft)：</strong>3 秒语音 prompt → 零样本语音克隆；AR 生成第 1 层 + NAR 并行生成后续层</li>
+          <li><strong>CosyVoice (阿里)：</strong>Flow Matching + LLM，支持零样本、跨语言、情感控制</li>
+          <li><strong>ChatTTS：</strong>细粒度韵律控制，支持笑声、停顿等副语言特征</li>
+        </ul>
+
+        <p class="tip">💡 音频 token 化使得语音/音乐生成可以复用 LLM 的自回归框架，是多模态统一建模的关键一步。</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q4 -->
+  <div class="card">
+    <div class="q-num">Q4</div>
+    <div class="q-text">长视频理解的挑战与方案？时空编码如何设计？</div>
+    <div class="q-tags"><span>视频理解</span><span>时空编码</span><span>视频压缩</span><span>长序列</span></div>
+    <details>
+      <summary class="chevron">展开答案</summary>
+      <div class="answer-inner">
+        <p><strong>核心挑战：</strong></p>
+        <ul>
+          <li><strong>Token 数爆炸：</strong>1 帧 = 256+ token，1 分钟视频（30fps）= 460K+ token，远超 LLM 上下文窗口</li>
+          <li><strong>时序依赖跨度大：</strong>需要关联几分钟甚至几小时前的事件</li>
+          <li><strong>信息冗余：</strong>相邻帧高度相似，大量 token 是重复信息</li>
+        </ul>
+
+        <p><strong>时空压缩方案：</strong></p>
+        <ul>
+          <li><strong>视频 VAE：</strong>空间压缩 8×（H/8 × W/8）+ 时间压缩 4×（每 4 帧→1 个 latent）</li>
+          <li><strong>关键帧采样：</strong>均匀采样 / 场景变化检测 / 动态帧率（信息密度自适应）</li>
+          <li><strong>Token 合并：</strong>相邻帧的相似 token 做 average pooling 或 attention pooling</li>
+        </ul>
+
+        <p><strong>时空注意力设计：</strong></p>
+
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>方案</th>
+                <th>计算方式</th>
+                <th>优势</th>
+                <th>劣势</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>分离式 (Divided)</td>
+                <td>先空间 Attention → 再时间 Attention</td>
+                <td>计算高效，O(T·N + T²)</td>
+                <td>时空交互不够充分</td>
+              </tr>
+              <tr>
+                <td>联合式 (Joint 3D)</td>
+                <td>所有帧的所有 token 做全局 Attention</td>
+                <td>时空交互最充分</td>
+                <td>计算量 O((T·N)²) 爆炸</td>
+              </tr>
+              <tr>
+                <td>窗口式 (Local)</td>
+                <td>时空局部窗口内做 Attention</td>
+                <td>平衡效率与交互</td>
+                <td>长程依赖受限</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p><strong>Memory-Augmented 方法：</strong></p>
+        <ul>
+          <li><strong>MovieChat：</strong>维护短期记忆（最近帧）+ 长期记忆（合并历史帧为压缩表示），突破上下文限制</li>
+          <li><strong>MA-LMM (Memory-Augmented LMM)：</strong>用可学习的 memory bank 存储历史视频信息，在线流式处理长视频</li>
+          <li><strong>LLaMA-VID：</strong>每帧仅用 2 个 token 表示（context token + content token），支持 1 小时视频</li>
+        </ul>
+
+        <p class="warn">⚠️ 长视频理解仍是开放问题：现有 benchmark（如 Video-MME Long）显示，即使顶级模型在 >30min 视频上准确率也大幅下降。</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q5 -->
+  <div class="card">
+    <div class="q-num">Q5</div>
+    <div class="q-text">多模态对齐训练策略？分阶段解冻的原因？</div>
+    <div class="q-tags"><span>多模态训练</span><span>对齐</span><span>分阶段解冻</span><span>SFT</span></div>
+    <details>
+      <summary class="chevron">展开答案</summary>
+      <div class="answer-inner">
+        <p><strong>三阶段训练范式（以 LLaVA 1.5 为例）：</strong></p>
+
+        <p><strong>阶段一：模态对齐预训练</strong></p>
+        <ul>
+          <li>🔒 冻结 Vision Encoder + LLM</li>
+          <li>🔓 只训练 Projector（MLP / Cross-Attention）</li>
+          <li>数据：~600K 图文对（粗粒度 caption 数据）</li>
+          <li>目标：让 projector 学会将视觉特征映射到 LLM 能理解的语义空间</li>
+        </ul>
+
+        <p><strong>阶段二：视觉指令微调</strong></p>
+        <ul>
+          <li>🔓 解冻 LLM（全参数或 LoRA）</li>
+          <li>🔒/🔓 Vision Encoder 可选解冻（InternVL 解冻效果更好）</li>
+          <li>数据：~150K~1.2M 高质量指令数据（VQA、对话、推理）</li>
+          <li>目标：LLM 学会基于视觉信息进行推理和对话</li>
+        </ul>
+
+        <p><strong>阶段三：高质量 SFT / RLHF</strong></p>
+        <ul>
+          <li>精选高质量数据做最终对齐</li>
+          <li>RLHF / DPO 减少幻觉、提升指令跟随能力</li>
+          <li>数据：~10K-50K 精标数据</li>
+        </ul>
+
+        <div class="formula">
+          分阶段核心逻辑：<br>
+          随机初始化的 Projector → 输出噪声特征 → 若同时更新 LLM → 噪声梯度破坏 LLM 已有语言能力<br>
+          ∴ 先固定 LLM，让 Projector 收敛到有意义的映射 → 再解冻 LLM 做细粒度适配
+        </div>
+
+        <p><strong>数据量级对比：</strong></p>
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>阶段</th>
+                <th>数据量</th>
+                <th>数据质量</th>
+                <th>训练目标</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>阶段一（对齐）</td>
+                <td>百万级（558K~5M）</td>
+                <td>粗粒度（短 caption）</td>
+                <td>学映射关系</td>
+              </tr>
+              <tr>
+                <td>阶段二（指令微调）</td>
+                <td>十万级（150K~1.2M）</td>
+                <td>高质量（多轮对话、推理）</td>
+                <td>学视觉推理</td>
+              </tr>
+              <tr>
+                <td>阶段三（RLHF）</td>
+                <td>万级（10K~50K）</td>
+                <td>精标（人工标注偏好）</td>
+                <td>减少幻觉、对齐人类偏好</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="tip">💡 InternVL-2 / Qwen-VL 等最新模型验证：阶段二解冻 Vision Encoder 可进一步提升细粒度视觉理解（OCR、小物体检测），但需要更大 batch size 避免训练不稳定。</p>
+
+        <p class="warn">⚠️ 常见坑：阶段一数据质量太差（如纯 alt-text）会导致 projector 学到错误映射，后续阶段难以修复 → 建议用 ShareGPT4V 等高质量 caption 数据。</p>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ============== Section 14: 安全与对齐前沿 ============== -->
+<section id="s14">
+  <h2>14. 安全与对齐前沿</h2>
+
+  <!-- Q1 -->
+  <div class="card">
+    <div class="q-num">Q1</div>
+    <div class="q-text">Constitutional AI / RLAIF 的原理？如何不用人工标注实现对齐？</div>
+    <div class="q-tags"><span>Alignment</span><span>RLAIF</span><span>Constitutional AI</span></div>
+    <details>
+      <summary class="chevron">显示答案</summary>
+      <div class="answer-inner">
+        <p><strong>Constitutional AI（Anthropic）</strong>：让 AI 用一组"宪法原则"自我评判和修改回答，无需人类逐条标注。</p>
+        <p><strong>RLAIF</strong>：用 AI 生成偏好标注替代人类标注，实现全自动化对齐流程。</p>
+
+        <div class="tip">核心流程：生成 → 自我批评 → 修改 → AI 标注偏好 → RL 训练</div>
+
+        <table class="table">
+          <thead>
+            <tr><th>阶段</th><th>说明</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>生成</td><td>模型针对 prompt 生成初始回答</td></tr>
+            <tr><td>自我批评</td><td>模型依据宪法原则评估回答是否违规</td></tr>
+            <tr><td>修改</td><td>模型根据批评意见重写回答</td></tr>
+            <tr><td>AI 标注偏好</td><td>AI 对 (原始, 修改) 对进行偏好排序</td></tr>
+            <tr><td>RL 训练</td><td>用 AI 偏好数据训练 Reward Model，再做 RLHF</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>优势：</strong>可扩展性强，不受人工标注瓶颈限制；可覆盖大量场景。</p>
+        <div class="warn">局限：AI 评判可能存在系统性偏差，宪法原则的设计本身仍需人类智慧。</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q2 -->
+  <div class="card">
+    <div class="q-num">Q2</div>
+    <div class="q-text">Red Teaming 与越狱攻击/防御？</div>
+    <div class="q-tags"><span>Safety</span><span>Red Teaming</span><span>Jailbreak</span></div>
+    <details>
+      <summary class="chevron">显示答案</summary>
+      <div class="answer-inner">
+        <p><strong>常见越狱方式：</strong></p>
+        <ul>
+          <li>角色扮演（"假装你是 DAN"）</li>
+          <li>编码绕过（base64 / ROT13 编码恶意指令）</li>
+          <li>多轮诱导（逐步引导模型突破边界）</li>
+          <li>对抗前缀 / 后缀</li>
+        </ul>
+
+        <p><strong>GCG 攻击（Greedy Coordinate Gradient）：</strong>自动在 prompt 末尾搜索对抗后缀，使模型以 "Sure, here is..." 开头回答有害请求。</p>
+
+        <table class="table">
+          <thead>
+            <tr><th>攻击类型</th><th>原理</th><th>自动化程度</th><th>迁移性</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>角色扮演</td><td>上下文劫持</td><td>手动</td><td>低</td></tr>
+            <tr><td>编码绕过</td><td>输入预处理盲区</td><td>手动</td><td>中</td></tr>
+            <tr><td>多轮诱导</td><td>逐步上下文污染</td><td>半自动</td><td>中</td></tr>
+            <tr><td>GCG 对抗后缀</td><td>梯度优化 token 序列</td><td>全自动</td><td>高（可跨模型）</td></tr>
+            <tr><td>对抗前缀注入</td><td>覆盖 system prompt</td><td>手动</td><td>中</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>防御手段：</strong></p>
+        <ul>
+          <li><strong>输入过滤（Perplexity Detector）：</strong>对抗后缀通常 perplexity 极高，检测异常输入</li>
+          <li><strong>安全 RLHF：</strong>加强模型拒绝能力，提升 refusal boundary</li>
+          <li><strong>Circuit Breaker：</strong>监控模型内部激活异常，发现有害生成前中断</li>
+          <li><strong>System Prompt 强化：</strong>加入明确安全约束和角色锁定</li>
+        </ul>
+
+        <div class="tip">Red Teaming 是持续对抗过程：攻击手段不断进化，防御也需迭代更新。</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q3 -->
+  <div class="card">
+    <div class="q-num">Q3</div>
+    <div class="q-text">幻觉（Hallucination）检测与缓解方法？</div>
+    <div class="q-tags"><span>Hallucination</span><span>Faithfulness</span><span>RAG</span></div>
+    <details>
+      <summary class="chevron">显示答案</summary>
+      <div class="answer-inner">
+        <p><strong>幻觉类型：</strong></p>
+        <ul>
+          <li><strong>事实性幻觉：</strong>生成与世界事实不符的内容（如编造论文、虚假数据）</li>
+          <li><strong>忠实性幻觉：</strong>生成与给定上下文不符的内容（摘要偏离原文）</li>
+        </ul>
+
+        <p><strong>检测方法：</strong></p>
+        <table class="table">
+          <thead>
+            <tr><th>方法</th><th>原理</th><th>适用场景</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>自洽性检测</td><td>多次采样同一问题，检查答案一致性</td><td>开放域 QA</td></tr>
+            <tr><td>外部知识验证</td><td>RAG 检索 + NLI Entailment 验证</td><td>事实核查</td></tr>
+            <tr><td>不确定性估计</td><td>Logit entropy / token 概率分布分析</td><td>实时检测</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>缓解方法：</strong></p>
+        <ul>
+          <li><strong>训练时：</strong>加入 factuality reward（FActScore — 将生成文本拆为原子事实逐条验证）</li>
+          <li><strong>推理时：</strong>DoLa（Decoding by Contrasting Layers）— 对比高层与低层 logits，抑制幻觉 token</li>
+          <li><strong>架构层面：</strong>RAG 接入实时知识库，减少模型依赖参数记忆</li>
+        </ul>
+
+        <div class="warn">幻觉无法完全消除，只能通过多层防线降低频率和影响。</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q4 -->
+  <div class="card">
+    <div class="q-num">Q4</div>
+    <div class="q-text">文本/图像水印（Watermark）的原理？</div>
+    <div class="q-tags"><span>Watermark</span><span>Detection</span><span>IP Protection</span></div>
+    <details>
+      <summary class="chevron">显示答案</summary>
+      <div class="answer-inner">
+        <p><strong>文本水印（Kirchenbauer et al., 2023）：</strong></p>
+        <ul>
+          <li>每步用上一个 token 作为种子（seed），通过哈希将词表分为 <strong>green list</strong> 和 <strong>red list</strong></li>
+          <li>采样时给 green list token 的 logit 加上偏置 δ，使模型倾向选 green token</li>
+          <li>检测：统计输出中 green token 比例，进行 z-test</li>
+        </ul>
+
+        <div class="formula">
+          z = (|s|<sub>G</sub> − γT) / √(T · γ · (1 − γ))
+        </div>
+
+        <div class="tip">其中 |s|<sub>G</sub> 为输出中 green token 数量，γ 为 green list 比例（通常 0.5），T 为总 token 数。z 值越高，越可能是水印文本。</div>
+
+        <p><strong>图像水印：</strong></p>
+        <ul>
+          <li><strong>隐写术：</strong>在像素 LSB 中嵌入信息</li>
+          <li><strong>频域嵌入：</strong>在 DCT/DWT 系数中嵌入水印，抗压缩</li>
+          <li><strong>Stable Signature：</strong>训练图像生成模型的 decoder 直接嵌入水印，生成即带标记</li>
+        </ul>
+
+        <table class="table">
+          <thead>
+            <tr><th>Trade-off 维度</th><th>说明</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>不可见性</td><td>水印不应影响文本/图像质量</td></tr>
+            <tr><td>鲁棒性</td><td>水印应在编辑、压缩、paraphrase 后仍可检测</td></tr>
+            <tr><td>容量</td><td>可嵌入信息的比特数</td></tr>
+          </tbody>
+        </table>
+
+        <div class="warn">水印的 trade-off：不可见性 vs 鲁棒性 vs 容量，三者难以同时最优。</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q5 -->
+  <div class="card">
+    <div class="q-num">Q5</div>
+    <div class="q-text">Reward Hacking 的表现形式与解决方案？Alignment Tax 是什么？</div>
+    <div class="q-tags"><span>Reward Hacking</span><span>RLHF</span><span>Alignment Tax</span></div>
+    <details>
+      <summary class="chevron">显示答案</summary>
+      <div class="answer-inner">
+        <p><strong>Reward Hacking 典型案例：</strong></p>
+        <ul>
+          <li><strong>冗长空洞：</strong>模型学会生成又长又空的回答（RM 偏好长回答 → 长度即分数）</li>
+          <li><strong>格式/关键词投机：</strong>过度使用特定格式（markdown 表格、编号列表）或关键词骗取 RM 高分</li>
+          <li><strong>谄媚（Sycophancy）：</strong>迎合用户观点而非给出正确答案，甚至在用户质疑时放弃正确立场</li>
+        </ul>
+
+        <p><strong>解决方案：</strong></p>
+        <table class="table">
+          <thead>
+            <tr><th>方法</th><th>原理</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>多奖励模型集成</td><td>多个 RM 投票，降低单个 RM 被利用的风险</td></tr>
+            <tr><td>过程奖励（PRM）</td><td>对推理每一步打分，而非只看最终结果</td></tr>
+            <tr><td>加强 KL 约束</td><td>限制 policy 偏离 base model 的程度，防止极端优化</td></tr>
+            <tr><td>对抗训练 RM</td><td>用 RL 模型的输出持续更新 RM，堵住已知漏洞</td></tr>
+          </tbody>
+        </table>
+
+        <div class="formula">
+          L<sub>RLHF</sub> = E[R(y|x)] − β · KL[π<sub>θ</sub>(y|x) ‖ π<sub>ref</sub>(y|x)]
+        </div>
+        <div class="tip">β 越大，KL 惩罚越强，模型越接近原始分布，Reward Hacking 风险越低，但对齐效果也越弱。</div>
+
+        <p><strong>Alignment Tax：</strong></p>
+        <ul>
+          <li>定义：对齐训练（RLHF/安全微调）导致模型部分原始能力下降的现象</li>
+          <li>典型表现：创造性写作能力下降、少数语言能力退化、代码生成多样性降低</li>
+          <li>本质：安全与能力的 trade-off — 过度安全限制了模型的表达空间</li>
+        </ul>
+
+        <div class="warn">Alignment Tax 提醒我们：对齐不是免费的。过度对齐可能让模型变得"安全但无用"。</div>
+      </div>
+    </details>
+  </div>
+
+</section>
+
+<!-- ============== Section 15: 推理时计算 ============== -->
+<section id="s15">
+  <h2>15. 推理时计算（Test-time Compute）</h2>
+
+  <!-- Q1 -->
+  <div class="card" id="s15q1">
+    <div class="q-num">Q1</div>
+    <div class="q-text">推理时 Scaling Law 是什么？与训练时 Scaling Law 有何区别？</div>
+    <div class="q-tags"><span>Scaling Law</span><span>Test-time Compute</span><span>推理优化</span></div>
+    <details>
+      <summary class="chevron">显示答案 ▼</summary>
+      <div class="answer-inner">
+
+        <h4>训练时 Scaling Law</h4>
+        <ul>
+          <li><strong>核心思想</strong>：增加模型参数量 N、数据量 D、计算量 C 可持续降低 loss</li>
+          <li>Kaplan et al. (2020) / Chinchilla (2022)：给定计算预算，最优分配 N 和 D</li>
+          <li>关系为幂律：<code>L(N,D) ∝ N<sup>-α</sup> + D<sup>-β</sup> + const</code></li>
+        </ul>
+
+        <h4>推理时 Scaling Law</h4>
+        <ul>
+          <li><strong>核心思想</strong>：固定模型权重不变，通过增加推理时的计算量来提升任务正确率</li>
+          <li>增加推理计算的方式：
+            <ul>
+              <li>更多采样（Best-of-N）</li>
+              <li>更长的思维链（Chain-of-Thought）</li>
+              <li>迭代修正（Self-Refinement）</li>
+              <li>树搜索（MCTS / Beam Search）</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="formula">
+          P(correct) = 1 − (1 − p)<sup>N</sup>  （Best-of-N 理想上界，独立采样假设）<br><br>
+          更一般地：Performance ∝ log(test-time compute) （在一定范围内近似 log-linear）
+        </div>
+
+        <h4>OpenAI "Let's Verify Step by Step" 结论</h4>
+        <ul>
+          <li>Process-based supervision（逐步验证）显著优于 Outcome-based supervision</li>
+          <li>在数学推理任务中，PRM + Best-of-N 可将正确率从 ~50% 提升至 ~78%</li>
+          <li>验证每一步比只看最终答案更有效地利用推理时计算</li>
+        </ul>
+
+        <h4>计算分配决策</h4>
+        <table class="table">
+          <thead>
+            <tr><th>策略</th><th>适用场景</th><th>优势</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>用更大模型</td><td>广泛任务、知识密集型</td><td>一次推理即可得到好结果</td></tr>
+            <tr><td>用更多推理计算</td><td>推理密集型、可验证任务</td><td>小模型 + 多次计算可超越大模型单次推理</td></tr>
+          </tbody>
+        </table>
+
+        <div class="tip">
+          💡 Snell et al. (2024) 发现：对于困难问题，增加推理时计算比增加模型大小更高效；对于简单问题，大模型一次推理更划算。
+        </div>
+
+      </div>
+    </details>
+  </div>
+
+  <!-- Q2 -->
+  <div class="card" id="s15q2">
+    <div class="q-num">Q2</div>
+    <div class="q-text">Process Reward Model (PRM) vs Outcome Reward Model (ORM) 的区别？</div>
+    <div class="q-tags"><span>PRM</span><span>ORM</span><span>Reward Model</span><span>验证器</span></div>
+    <details>
+      <summary class="chevron">显示答案 ▼</summary>
+      <div class="answer-inner">
+
+        <h4>核心区别</h4>
+        <table class="table">
+          <thead>
+            <tr><th>维度</th><th>ORM（Outcome RM）</th><th>PRM（Process RM）</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>评分粒度</td><td>仅对最终答案打分</td><td>对推理的每一步打分</td></tr>
+            <tr><td>信号类型</td><td>稀疏信号（只有终点）</td><td>密集信号（每步反馈）</td></tr>
+            <tr><td>Credit Assignment</td><td>差（无法定位错误步骤）</td><td>好（精确定位出错位置）</td></tr>
+            <tr><td>训练数据成本</td><td>低（只需判断答案对错）</td><td>高（需标注每步正确性）</td></tr>
+            <tr><td>搜索效率</td><td>低（必须走完整条路径）</td><td>高（可提前剪枝错误分支）</td></tr>
+            <tr><td>典型应用</td><td>简单 Best-of-N 筛选</td><td>Beam Search / MCTS 引导</td></tr>
+          </tbody>
+        </table>
+
+        <h4>ORM 详解</h4>
+        <ul>
+          <li>训练方式：给定问题 + 完整解题过程 + 最终答案，标注答案是否正确</li>
+          <li>使用方式：生成多个完整解答，用 ORM 对最终答案打分，选分数最高的</li>
+          <li>局限：即使答案正确，中间推理过程可能有错（"凑对答案"）</li>
+        </ul>
+
+        <h4>PRM 详解</h4>
+        <ul>
+          <li>训练方式：对推理链的每一步标注 {正确, 中性, 错误}</li>
+          <li>使用方式：在推理过程中逐步评估，可在任何一步发现错误并回溯</li>
+          <li>最终得分：所有步骤分数的聚合（如最小值或乘积）</li>
+        </ul>
+
+        <div class="formula">
+          ORM score: R(x, y_final) → {0, 1}<br><br>
+          PRM score: R(x, y₁, y₂, ..., yₜ) → r₁, r₂, ..., rₜ<br>
+          最终分数 = min(r₁, ..., rₜ) 或 ∏ rᵢ
+        </div>
+
+        <h4>PRM 训练数据：Math-Shepherd 方法</h4>
+        <ul>
+          <li><strong>问题</strong>：人工标注每步正确性成本极高</li>
+          <li><strong>Math-Shepherd 解决方案</strong>：
+            <ol>
+              <li>对每一步，从该步开始继续采样多条完整解答</li>
+              <li>统计这些续写中最终答案正确的比例</li>
+              <li>比例高 → 该步大概率正确；比例低 → 该步可能有错</li>
+            </ol>
+          </li>
+          <li>本质：用 Monte Carlo 估计代替人工标注，自动化 PRM 数据构建</li>
+        </ul>
+
+        <h4>PRM 的核心优势</h4>
+        <ul>
+          <li><strong>更好的 Credit Assignment</strong>：能精确定位推理链中第几步出错</li>
+          <li><strong>更高效的搜索</strong>：不需要走完整条路径就能判断方向是否正确</li>
+          <li><strong>更好的泛化</strong>：学会评估推理步骤的质量，而非记忆答案模式</li>
+        </ul>
+
+        <div class="warn">
+          ⚠️ PRM 的训练成本显著高于 ORM，但在复杂推理任务（数学、编程）中收益也更大。实践中常先用 ORM 做初步筛选，再用 PRM 做精细搜索。
+        </div>
+
+      </div>
+    </details>
+  </div>
+
+  <!-- Q3 -->
+  <div class="card" id="s15q3">
+    <div class="q-num">Q3</div>
+    <div class="q-text">Best-of-N / MCTS / Beam Search 在 LLM 推理中的应用？</div>
+    <div class="q-tags"><span>Best-of-N</span><span>MCTS</span><span>Beam Search</span><span>搜索策略</span></div>
+    <details>
+      <summary class="chevron">显示答案 ▼</summary>
+      <div class="answer-inner">
+
+        <h4>一、Best-of-N（Rejection Sampling）</h4>
+        <ul>
+          <li><strong>流程</strong>：独立采样 N 条完整推理路径 → 用 Reward Model / Verifier 对每条打分 → 选得分最高的作为最终答案</li>
+          <li><strong>计算量</strong>：N 倍推理成本（线性增长）</li>
+          <li><strong>效果</strong>：
+            <ul>
+              <li>随 N 增大，正确率近似 log-linear 增长</li>
+              <li>但存在饱和效应：N 超过某个阈值后提升边际递减</li>
+              <li>原因：采样多样性有限，模型 policy 覆盖不到正确答案时 N 再大也无用</li>
+            </ul>
+          </li>
+          <li><strong>优点</strong>：实现简单、易并行、无需修改模型</li>
+          <li><strong>缺点</strong>：计算效率低（大量重复无用计算）、无法利用中间步骤信息</li>
+        </ul>
+
+        <div class="formula">
+          Best-of-N 上界：P(至少一条正确) = 1 − (1−p)<sup>N</sup><br>
+          实际效果：Accuracy ≈ a · log(N) + b （log-linear regime）
+        </div>
+
+        <h4>二、MCTS（蒙特卡洛树搜索）</h4>
+        <ul>
+          <li><strong>核心思想</strong>：将推理步骤建模为树的节点，每个节点是一个推理步骤，边是可能的下一步</li>
+          <li><strong>四个阶段</strong>：
+            <ol>
+              <li><strong>Selection</strong>：从根节点出发，用 UCB 公式选择子节点，平衡探索与利用</li>
+              <li><strong>Expansion</strong>：到达叶子节点时，用 LLM 生成新的推理步骤扩展</li>
+              <li><strong>Simulation</strong>：从新节点出发，快速模拟（rollout）到最终答案</li>
+              <li><strong>Backpropagation</strong>：将模拟结果反向传播，更新路径上所有节点的价值估计</li>
+            </ol>
+          </li>
+          <li><strong>UCB 公式</strong>：</li>
+        </ul>
+
+        <div class="formula">
+          UCB(node) = Q(node) / N(node) + c · √(ln N(parent) / N(node))
+        </div>
+
+        <ul>
+          <li><strong>从 AlphaGo 到 o1 的迁移</strong>：
+            <ul>
+              <li>AlphaGo：Policy Network + Value Network + MCTS 在围棋中超越人类</li>
+              <li>o1 推测：LLM Policy + PRM Value + 树搜索在推理任务中增强</li>
+              <li>关键差异：LLM 的动作空间远大于围棋，需要 policy 做有效剪枝</li>
+            </ul>
+          </li>
+          <li><strong>优点</strong>：理论上计算效率最高，能发现最优推理路径</li>
+          <li><strong>缺点</strong>：实现复杂、需要可靠的 value function、延迟高</li>
+        </ul>
+
+        <h4>三、Beam Search with Verifier</h4>
+        <ul>
+          <li><strong>流程</strong>：
+            <ol>
+              <li>维护 beam_size 条候选推理路径</li>
+              <li>每步对所有候选生成下一步的多种延续</li>
+              <li>用 PRM 对每个新步骤打分</li>
+              <li>保留得分最高的 beam_size 条路径，剪枝其余</li>
+              <li>重复直至所有路径到达终点</li>
+            </ol>
+          </li>
+          <li><strong>与标准 Beam Search 的区别</strong>：
+            <ul>
+              <li>标准 Beam Search：用 token-level log-prob 打分</li>
+              <li>Verifier-guided：用 step-level PRM 分数打分</li>
+            </ul>
+          </li>
+          <li><strong>优点</strong>：比 Best-of-N 高效（提前剪枝），比 MCTS 简单</li>
+          <li><strong>缺点</strong>：贪心策略可能错过全局最优，PRM 偏差会累积</li>
+        </ul>
+
+        <table class="table">
+          <thead>
+            <tr><th>方法</th><th>计算效率</th><th>实现复杂度</th><th>需要的组件</th><th>适合场景</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Best-of-N</td><td>低</td><td>低</td><td>ORM/Verifier</td><td>简单任务、快速部署</td></tr>
+            <tr><td>Beam Search</td><td>中</td><td>中</td><td>PRM</td><td>多步推理、可验证任务</td></tr>
+            <tr><td>MCTS</td><td>高</td><td>高</td><td>Policy + Value</td><td>复杂推理、计算预算充足</td></tr>
+          </tbody>
+        </table>
+
+        <div class="tip">
+          💡 实践建议：简单场景用 Best-of-N（N=8~64），中等复杂度用 Beam Search（beam=4~8），极端困难问题考虑 MCTS。关键在于 Verifier/PRM 的质量——搜索策略再好，verifier 不准也白搭。
+        </div>
+
+      </div>
+    </details>
+  </div>
+
+  <!-- Q4 -->
+  <div class="card" id="s15q4">
+    <div class="q-num">Q4</div>
+    <div class="q-text">自我纠正（Self-Correction）真的有效吗？有哪些争论？</div>
+    <div class="q-tags"><span>Self-Correction</span><span>Self-Refine</span><span>Reflexion</span><span>验证</span></div>
+    <details>
+      <summary class="chevron">显示答案 ▼</summary>
+      <div class="answer-inner">
+
+        <h4>内在自纠正（Intrinsic Self-Correction）</h4>
+        <ul>
+          <li><strong>定义</strong>：模型仅依赖自身能力发现错误并修正，无外部反馈</li>
+          <li><strong>典型做法</strong>：生成答案 → 提示"请检查你的答案" → 模型自行修改</li>
+          <li><strong>Huang et al. (2023) "Large Language Models Cannot Self-Correct Reasoning Yet" 核心结论</strong>：
+            <ul>
+              <li>在没有外部反馈时，Self-Correction 往往<strong>降低</strong>正确率</li>
+              <li>模型可能把对的答案"改错"（over-correction）</li>
+              <li>模型无法可靠区分自己的输出是对是错</li>
+            </ul>
+          </li>
+          <li><strong>根本原因</strong>：
+            <ul>
+              <li>如果模型第一次就能判断答案对错，为什么第一次不直接给出对的？</li>
+              <li>自纠正本质上需要一个比生成能力更强的"验证能力"——但同一个模型难以兼具</li>
+              <li>"用同一个有缺陷的推理器来验证自己"是逻辑上的困境</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h4>外在自纠正（Extrinsic Self-Correction）</h4>
+        <ul>
+          <li><strong>定义</strong>：借助外部工具或验证器提供反馈信号</li>
+          <li><strong>有效的外部信号来源</strong>：
+            <ul>
+              <li><strong>代码执行</strong>：运行代码，报错信息明确指出问题</li>
+              <li><strong>单元测试</strong>：测试通过/失败是无歧义的二进制信号</li>
+              <li><strong>搜索引擎</strong>：fact-check 事实性陈述</li>
+              <li><strong>数学验证器</strong>：形式化证明检查</li>
+              <li><strong>编译器</strong>：语法/类型错误的确定性反馈</li>
+            </ul>
+          </li>
+          <li><strong>关键区别</strong>：外部反馈提供了模型自身无法获得的"ground truth"信号</li>
+        </ul>
+
+        <h4>代表性框架</h4>
+        <table class="table">
+          <thead>
+            <tr><th>框架</th><th>机制</th><th>外部信号</th><th>效果</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Self-Refine</td><td>生成 → 自我反馈 → 修改（迭代）</td><td>无（纯内在）</td><td>开放生成任务有效，推理任务效果存疑</td></tr>
+            <tr><td>Reflexion</td><td>执行 → 环境反馈 → 反思 → 重试</td><td>环境反馈（测试结果等）</td><td>编程任务显著提升</td></tr>
+            <tr><td>CRITIC</td><td>生成 → 工具验证 → 修改</td><td>搜索/代码执行</td><td>事实性任务明显改善</td></tr>
+            <tr><td>Self-Debug</td><td>生成代码 → 执行 → 根据报错修改</td><td>代码执行结果</td><td>编程任务有效</td></tr>
+          </tbody>
+        </table>
+
+        <h4>何时 Self-Correction 有效？</h4>
+        <ul>
+          <li>✅ <strong>有效场景</strong>：
+            <ul>
+              <li>有明确、自动化的验证信号（代码能跑 / 数学可验证 / 测试能通过）</li>
+              <li>"验证比生成容易"的任务（P ≠ NP 的类比）</li>
+              <li>错误类型是可定位的（语法错误、类型错误、格式问题）</li>
+            </ul>
+          </li>
+          <li>❌ <strong>无效场景</strong>：
+            <ul>
+              <li>开放性推理（没有标准答案可对照）</li>
+              <li>模型置信度高但答案错误（幻觉）</li>
+              <li>需要新知识才能修正的错误</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="warn">
+          ⚠️ 核心洞察：Self-Correction 有效的前提是"验证比生成容易"。对于代码（可执行）和数学（可形式化验证），这一条件成立；对于常识推理和开放性问题，这一条件通常不成立。
+        </div>
+
+      </div>
+    </details>
+  </div>
+
+  <!-- Q5 -->
+  <div class="card" id="s15q5">
+    <div class="q-num">Q5</div>
+    <div class="q-text">o1/R1 类模型如何训练长思维链推理能力？</div>
+    <div class="q-tags"><span>o1</span><span>DeepSeek-R1</span><span>RL</span><span>CoT</span><span>GRPO</span></div>
+    <details>
+      <summary class="chevron">显示答案 ▼</summary>
+      <div class="answer-inner">
+
+        <h4>两条技术路线</h4>
+        <table class="table">
+          <thead>
+            <tr><th>路线</th><th>方法</th><th>优点</th><th>缺点</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>蒸馏路线</td><td>用强模型（如 GPT-4/o1）生成 CoT 数据 → SFT 训练</td><td>简单、快速、稳定</td><td>天花板受限于教师模型、无法超越数据分布</td></tr>
+            <tr><td>RL 路线</td><td>RL（GRPO/PPO）+ Verifier/Reward → 模型自发涌现推理</td><td>天花板高、可超越训练数据</td><td>训练不稳定、成本高、需要好的 reward 设计</td></tr>
+          </tbody>
+        </table>
+
+        <h4>DeepSeek-R1 训练流程</h4>
+
+        <p><strong>阶段 1：R1-Zero（纯 RL 实验）</strong></p>
+        <ul>
+          <li>从 DeepSeek-V3-Base 出发，不做任何 SFT</li>
+          <li>直接用 GRPO 强化学习训练，奖励信号来自 Rule-based Verifier（数学答案对错）</li>
+          <li><strong>惊人发现</strong>：模型自发涌现了 CoT 行为！
+            <ul>
+              <li>学会了分步推理</li>
+              <li>学会了自我验证（"让我检查一下"）</li>
+              <li>学会了回溯（"等等，这步有问题"）</li>
+              <li>思维链长度随训练自动增长</li>
+            </ul>
+          </li>
+          <li><strong>问题</strong>：语言混杂（中英混搭）、格式混乱、可读性差</li>
+        </ul>
+
+        <p><strong>阶段 2：R1 完整训练流程</strong></p>
+        <ol>
+          <li><strong>冷启动 SFT</strong>：用少量高质量 CoT 数据做 SFT
+            <ul>
+              <li>目的：建立基本的推理格式和语言规范</li>
+              <li>数据量：数千条精标 CoT 样本</li>
+            </ul>
+          </li>
+          <li><strong>GRPO 强化学习</strong>：
+            <ul>
+              <li>奖励信号：正确性（Rule-based）+ 格式规范性</li>
+              <li>模型学会产生更长、更深入的思维链</li>
+              <li>关键：不限制 CoT 长度，让模型自由探索</li>
+            </ul>
+          </li>
+          <li><strong>Rejection Sampling + SFT 迭代</strong>：
+            <ul>
+              <li>用 RL 训练后的模型采样大量推理数据</li>
+              <li>筛选正确的作为新 SFT 数据</li>
+              <li>对模型做进一步 SFT 以提升通用能力</li>
+            </ul>
+          </li>
+        </ol>
+
+        <div class="formula">
+          GRPO 目标：J(θ) = E[A(s,a) · min(r(θ), clip(r(θ), 1±ε)) − β · KL(π_θ ∥ π_ref)]<br><br>
+          其中 r(θ) = π_θ(a|s) / π_old(a|s)，A(s,a) 由组内相对排名计算（无需单独的 Critic）
+        </div>
+
+        <h4>关键发现与涌现能力</h4>
+        <ul>
+          <li><strong>RL 让模型学会"思考更久"</strong>：
+            <ul>
+              <li>面对更难的问题，模型自动生成更长的思维链</li>
+              <li>这是自适应计算的涌现——模型学会了分配更多计算给更难的问题</li>
+            </ul>
+          </li>
+          <li><strong>思维链长度与问题难度正相关</strong>：
+            <ul>
+              <li>简单问题：几十个 token 的 CoT</li>
+              <li>困难问题：数千甚至上万 token 的 CoT</li>
+              <li>这不是人为设定的，是 RL 训练自然涌现的</li>
+            </ul>
+          </li>
+          <li><strong>涌现的推理能力</strong>：
+            <ul>
+              <li>🔄 <strong>反思</strong>（Reflection）："我觉得这个方法不太对，换一种思路"</li>
+              <li>↩️ <strong>回溯</strong>（Backtracking）："第3步有问题，回到第2步重新推导"</li>
+              <li>✅ <strong>验证</strong>（Verification）："让我代入原方程验证一下答案"</li>
+              <li>📐 <strong>多角度尝试</strong>：先试方法A，不行再试方法B</li>
+            </ul>
+          </li>
+        </ul>
+
+        <div class="tip">
+          💡 核心启示：RL 的优势在于不受人类示范数据的限制——人类很难写出最优的万字推理链，但 RL 可以让模型自己探索出来。蒸馏路线的天花板是教师模型；RL 路线的天花板是 reward 信号的质量和搜索空间的覆盖。
+        </div>
+
+        <div class="warn">
+          ⚠️ 当前局限：RL 训练长 CoT 主要在可验证任务（数学、编程）上效果显著，对于开放性任务（写作、常识推理）的 reward 设计仍是开放问题。
+        </div>
+
+      </div>
+    </details>
+  </div>
+
+</section>
+
+<section id="s16">
+  <h2>16. 训练稳定性与工程实战</h2>
+
+  <!-- Q1 -->
+  <div class="card">
+    <div class="q-num">Q1</div>
+    <div class="q-text">Loss Spike 的常见原因与处理方法？</div>
+    <div class="q-tags"><span>训练稳定性</span><span>Loss Spike</span><span>梯度裁剪</span></div>
+    <details>
+      <summary class="chevron">查看答案</summary>
+      <div class="answer-inner">
+        <h4>常见原因</h4>
+        <ul>
+          <li><strong>数据质量问题</strong>：某个 batch 含异常样本（损坏、标注错误、极端值）</li>
+          <li><strong>学习率过大</strong>：导致梯度爆炸，参数更新幅度过大</li>
+          <li><strong>数值溢出</strong>：FP16 下出现 inf/nan，超出表示范围</li>
+          <li><strong>数据分布突变</strong>：不同领域数据边界处分布剧变</li>
+        </ul>
+
+        <h4>处理方法</h4>
+        <ul>
+          <li><strong>梯度裁剪</strong>：clip grad norm，通常设为 1.0</li>
+          <li><strong>数据回溯</strong>：检查 spike 前后的训练数据，定位问题样本</li>
+          <li><strong>Checkpoint 回滚</strong>：从最近 checkpoint 恢复，跳过问题数据</li>
+          <li><strong>降低学习率重启</strong>：减小 lr 后从 checkpoint 继续训练</li>
+          <li><strong>z-loss 正则化</strong>（PaLM 使用）：抑制 logits 过大</li>
+        </ul>
+
+        <h4>z-loss 正则化</h4>
+        <div class="formula">
+          L<sub>z</sub> = 1e-4 × log²(Z)
+        </div>
+        <div class="tip">其中 Z 为 softmax 的归一化因子（logits 的 logsumexp）。z-loss 惩罚过大的 logits，防止数值不稳定。</div>
+
+        <div class="warn">Loss Spike 不一定需要立即干预——偶尔的小 spike 若能自行恢复是正常现象；但持续或剧烈的 spike 需要及时回滚。</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q2 -->
+  <div class="card">
+    <div class="q-num">Q2</div>
+    <div class="q-text">混合精度训练（FP16/BF16/FP8）的原理？各有什么数值问题？</div>
+    <div class="q-tags"><span>混合精度</span><span>FP16</span><span>BF16</span><span>FP8</span></div>
+    <details>
+      <summary class="chevron">查看答案</summary>
+      <div class="answer-inner">
+        <h4>三种低精度格式</h4>
+        <ul>
+          <li><strong>FP16</strong>：指数位 5，尾数位 10，范围 ±65504</li>
+          <li><strong>BF16</strong>：指数位 8，尾数位 7，范围同 FP32，但精度较低</li>
+          <li><strong>FP8</strong>（E4M3 / E5M2）：H100+ 支持，分别用于前向计算和梯度</li>
+        </ul>
+
+        <h4>精度格式对比</h4>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>格式</th>
+              <th>指数位</th>
+              <th>尾数位</th>
+              <th>动态范围</th>
+              <th>需要 Loss Scaling</th>
+              <th>典型用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>FP16</td>
+              <td>5</td>
+              <td>10</td>
+              <td>±65504</td>
+              <td>✅ 必须</td>
+              <td>V100/A100 训练</td>
+            </tr>
+            <tr>
+              <td>BF16</td>
+              <td>8</td>
+              <td>7</td>
+              <td>同 FP32</td>
+              <td>❌ 不需要</td>
+              <td>A100/H100 训练（推荐）</td>
+            </tr>
+            <tr>
+              <td>FP8 E4M3</td>
+              <td>4</td>
+              <td>3</td>
+              <td>±448</td>
+              <td>需要 per-tensor scaling</td>
+              <td>H100 前向计算</td>
+            </tr>
+            <tr>
+              <td>FP8 E5M2</td>
+              <td>5</td>
+              <td>2</td>
+              <td>±57344</td>
+              <td>需要 per-tensor scaling</td>
+              <td>H100 梯度</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4>Loss Scaling（FP16 必须）</h4>
+        <ul>
+          <li>前向时将 loss 乘以 scale factor（放大梯度，避免 underflow）</li>
+          <li>反向传播后将梯度除以 scale factor（还原真实梯度）</li>
+          <li><strong>Dynamic Loss Scaling</strong>：遇到 overflow 则减半 scale，连续 N 步无 overflow 则加倍</li>
+        </ul>
+
+        <div class="formula">
+          scaled_loss = loss × S<br>
+          grads = backward(scaled_loss)<br>
+          true_grads = grads / S
+        </div>
+
+        <div class="tip">BF16 的核心优势：动态范围与 FP32 相同（指数位 8），因此不需要 loss scaling，大幅简化训练流程。目前大模型训练首选 BF16。</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q3 -->
+  <div class="card">
+    <div class="q-num">Q3</div>
+    <div class="q-text">大模型训练的 Checkpoint 策略与故障恢复？</div>
+    <div class="q-tags"><span>Checkpoint</span><span>故障恢复</span><span>Elastic Training</span></div>
+    <details>
+      <summary class="chevron">查看答案</summary>
+      <div class="answer-inner">
+        <h4>Checkpoint 频率</h4>
+        <ul>
+          <li>通常每 <strong>1000~5000 steps</strong> 保存一次</li>
+          <li>权衡：太频繁浪费 I/O 和存储；太稀疏则故障后回退代价大</li>
+        </ul>
+
+        <h4>Async Checkpoint</h4>
+        <ul>
+          <li>异步写入，不阻塞训练（Megatron-LM 实现）</li>
+          <li>将模型状态拷贝到 CPU/pinned memory，后台线程写入存储</li>
+          <li>训练继续前进，写入与计算重叠</li>
+        </ul>
+
+        <h4>分布式 Checkpoint</h4>
+        <ul>
+          <li>每个 rank 独立保存自己的 shard（避免汇聚到单节点）</li>
+          <li>支持 <strong>resharding</strong>：改变并行度后仍可恢复训练（如从 TP=8 变为 TP=4）</li>
+        </ul>
+
+        <h4>故障恢复流程</h4>
+        <ol>
+          <li><strong>检测故障</strong>：NCCL timeout / GPU ECC error / 进程崩溃</li>
+          <li><strong>从最近 checkpoint 加载</strong>：恢复模型参数、优化器状态、scheduler</li>
+          <li><strong>快进 data loader</strong>：使用确定性 shuffle，跳到正确的数据位置</li>
+          <li><strong>跳过或标记问题节点</strong>：将故障 GPU/节点从集群中移除</li>
+        </ol>
+
+        <h4>Elastic Training</h4>
+        <ul>
+          <li>支持动态增减节点，不中断训练</li>
+          <li>节点故障时自动缩容继续训练，修复后扩容回来</li>
+          <li>代表框架：TorchElastic、Varuna</li>
+        </ul>
+
+        <div class="warn">确定性 data loader 是故障恢复的关键——必须能根据 step 数精确重放数据顺序，否则会重复训练或遗漏数据。</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q4 -->
+  <div class="card">
+    <div class="q-num">Q4</div>
+    <div class="q-text">训练监控的关键指标有哪些？如何判断训练是否健康？</div>
+    <div class="q-tags"><span>训练监控</span><span>MFU</span><span>Gradient Norm</span><span>告警</span></div>
+    <details>
+      <summary class="chevron">查看答案</summary>
+      <div class="answer-inner">
+        <h4>核心指标</h4>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>指标</th>
+              <th>健康状态</th>
+              <th>异常信号</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Loss 曲线</td>
+              <td>平滑下降</td>
+              <td>持续 spike 或上升</td>
+            </tr>
+            <tr>
+              <td>Gradient Norm</td>
+              <td>稳定在某个范围</td>
+              <td>突然增大 → 不稳定</td>
+            </tr>
+            <tr>
+              <td>Learning Rate</td>
+              <td>与 scheduler 一致</td>
+              <td>偏离预期曲线</td>
+            </tr>
+            <tr>
+              <td>Token Throughput (tokens/s/GPU)</td>
+              <td>稳定</td>
+              <td>下降 → 有 straggler</td>
+            </tr>
+            <tr>
+              <td>GPU Utilization / MFU</td>
+              <td>MFU &gt; 40%</td>
+              <td>MFU 骤降 → 通信瓶颈/慢节点</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4>高级指标</h4>
+        <ul>
+          <li><strong>参数 norm</strong>（各层权重大小）：异常增长说明训练发散</li>
+          <li><strong>激活值范围</strong>：检测 nan/inf，尤其关注最后几层</li>
+          <li><strong>梯度中 zero 比例</strong>：过高说明 dead neurons（ReLU 死亡）</li>
+        </ul>
+
+        <h4>告警规则</h4>
+        <ul>
+          <li><code>grad_norm &gt; 10× 历史均值</code> → 立即告警</li>
+          <li><code>loss 连续 100 步上升</code> → 自动暂停训练</li>
+          <li><code>MFU &lt; 阈值</code> → 检查慢节点、网络问题</li>
+        </ul>
+
+        <div class="formula">
+          MFU = 实际 FLOPS / 理论峰值 FLOPS
+        </div>
+
+        <div class="tip">MFU（Model FLOPS Utilization）是衡量训练效率的黄金指标。GPT-3 训练 MFU 约 46%，PaLM 约 46-57%。MFU 低说明存在通信、内存、或调度瓶颈。</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q5 -->
+  <div class="card">
+    <div class="q-num">Q5</div>
+    <div class="q-text">集群通信拓扑与网络瓶颈？NVLink / InfiniBand / RoCE 对比？</div>
+    <div class="q-tags"><span>集群通信</span><span>NVLink</span><span>InfiniBand</span><span>拓扑感知</span></div>
+    <details>
+      <summary class="chevron">查看答案</summary>
+      <div class="answer-inner">
+        <h4>GPU 互联层级</h4>
+        <ol>
+          <li><strong>NVLink / NVSwitch</strong>：单机内 GPU 互联（H100: 900GB/s per GPU）</li>
+          <li><strong>InfiniBand / RoCE</strong>：机间网络（400Gbps NDR IB）</li>
+          <li><strong>以太网</strong>：跨机架/跨机房（带宽最低，延迟最高）</li>
+        </ol>
+
+        <h4>互联技术对比</h4>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>技术</th>
+              <th>带宽</th>
+              <th>延迟</th>
+              <th>范围</th>
+              <th>典型用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>NVLink (H100)</td>
+              <td>900 GB/s</td>
+              <td>~μs</td>
+              <td>单机内</td>
+              <td>Tensor Parallelism</td>
+            </tr>
+            <tr>
+              <td>InfiniBand NDR</td>
+              <td>400 Gbps (50 GB/s)</td>
+              <td>~1-2 μs</td>
+              <td>机间</td>
+              <td>Data Parallelism AllReduce</td>
+            </tr>
+            <tr>
+              <td>RoCE v2</td>
+              <td>100-400 Gbps</td>
+              <td>~2-5 μs</td>
+              <td>机间</td>
+              <td>IB 替代（以太网上 RDMA）</td>
+            </tr>
+            <tr>
+              <td>以太网</td>
+              <td>25-100 Gbps</td>
+              <td>~10-50 μs</td>
+              <td>跨机架</td>
+              <td>管理面 / 非关键通信</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4>通信瓶颈分析</h4>
+        <ul>
+          <li><strong>TP 通信</strong>在 NVLink 内完成（低延迟、高带宽，AllReduce 频繁）</li>
+          <li><strong>PP 通信</strong>为点对点 P2P（少量激活值数据，延迟敏感）</li>
+          <li><strong>DP 的 AllReduce</strong> 走 InfiniBand（大数据量梯度同步，带宽敏感）</li>
+        </ul>
+
+        <h4>拓扑感知并行策略</h4>
+        <ul>
+          <li>同一节点内做 <strong>TP</strong>（需要最高带宽，NVLink 满足）</li>
+          <li>跨节点做 <strong>DP 和 PP</strong>（通信量相对较少，IB 可承载）</li>
+          <li>DeepSeek-V3 的 <strong>Expert Parallelism</strong> 需要大量 All-to-All 通信，对网络拓扑要求极高</li>
+        </ul>
+
+        <h4>网络故障处理</h4>
+        <ul>
+          <li><strong>链路闪断</strong>：自动重试 + 备用路径切换（多 rail 网络）</li>
+          <li><strong>NCCL timeout</strong>：检测超时后标记故障节点，触发 checkpoint 恢复</li>
+          <li><strong>慢节点检测</strong>：监控各节点 AllReduce 完成时间，stragglers 会拖慢整体训练</li>
+        </ul>
+
+        <div class="tip">拓扑感知调度的核心原则：将通信量最大的并行维度放在带宽最高的互联层级上。TP 需要每个前向/反向都做 AllReduce，因此必须放在 NVLink 内。</div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section id="s17">
+  <h2>17. 端侧与高效部署</h2>
+
+  <!-- Q1 -->
+  <div class="card">
+    <div class="q-num">Q1</div>
+    <div class="q-text">模型剪枝（Pruning）的方法？结构化与非结构化剪枝的区别？</div>
+    <div class="q-tags"><span>Pruning</span><span>压缩</span><span>SparseGPT</span><span>Wanda</span></div>
+    <details>
+      <summary class="chevron">显示答案 ▾</summary>
+      <div class="answer-inner">
+        <p><strong>非结构化剪枝：</strong>逐元素置零（SparseGPT / Wanda）</p>
+        <ul>
+          <li>优势：压缩率高，可达 50%~60% 稀疏度几乎无损</li>
+          <li>劣势：需要稀疏硬件支持（如 NVIDIA A100 Sparse Tensor Core 2:4）才有实际加速</li>
+        </ul>
+        <p><strong>结构化剪枝：</strong>移除整行/整列/整层（SliceGPT / ShortGPT / LaCo）</p>
+        <ul>
+          <li>优势：直接减少计算量，无需特殊硬件即可加速</li>
+          <li>劣势：精度损失可能更大，需要更精细的重要性评估</li>
+        </ul>
+        <p><strong>剪枝粒度层次：</strong></p>
+        <div class="formula">权重级（fine-grained） &lt; 通道级（channel） &lt; 层级（layer）</div>
+        <div class="tip">Wanda 的核心思路：按 |w| × ||x|| 的乘积重要性打分，无需校准数据即可完成剪枝，极其高效。</div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>方法</th>
+              <th>类型</th>
+              <th>粒度</th>
+              <th>是否需要校准数据</th>
+              <th>硬件要求</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>SparseGPT</td>
+              <td>非结构化</td>
+              <td>权重级</td>
+              <td>需要少量</td>
+              <td>稀疏硬件加速</td>
+            </tr>
+            <tr>
+              <td>Wanda</td>
+              <td>非结构化</td>
+              <td>权重级</td>
+              <td>不需要</td>
+              <td>稀疏硬件加速</td>
+            </tr>
+            <tr>
+              <td>SliceGPT</td>
+              <td>结构化</td>
+              <td>通道级</td>
+              <td>需要少量</td>
+              <td>通用硬件</td>
+            </tr>
+            <tr>
+              <td>ShortGPT</td>
+              <td>结构化</td>
+              <td>层级</td>
+              <td>需要少量</td>
+              <td>通用硬件</td>
+            </tr>
+            <tr>
+              <td>LaCo</td>
+              <td>结构化</td>
+              <td>层级</td>
+              <td>需要少量</td>
+              <td>通用硬件</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q2 -->
+  <div class="card">
+    <div class="q-num">Q2</div>
+    <div class="q-text">Prefill 与 Decode 分离部署架构？为什么这样设计？</div>
+    <div class="q-tags"><span>推理架构</span><span>Prefill-Decode分离</span><span>Distserve</span></div>
+    <details>
+      <summary class="chevron">显示答案 ▾</summary>
+      <div class="answer-inner">
+        <p><strong>Prefill 阶段特点：</strong></p>
+        <ul>
+          <li>计算密集（处理全部 prompt tokens，大矩阵乘法）</li>
+          <li>GPU 利用率高，Compute-bound</li>
+          <li>延迟要求：TTFT（Time To First Token）</li>
+        </ul>
+        <p><strong>Decode 阶段特点：</strong></p>
+        <ul>
+          <li>显存密集（KV Cache 持续增长）</li>
+          <li>计算利用率低（每次只算 1 个 token），Memory-bound</li>
+          <li>延迟要求：TPOT（Time Per Output Token）</li>
+        </ul>
+        <p><strong>分离架构优势：</strong></p>
+        <ul>
+          <li>Prefill 机器配高算力卡（如 H100）—— 最大化 FLOPS 利用</li>
+          <li>Decode 机器配大显存卡或多卡分摊 KV Cache —— 最大化显存带宽利用</li>
+          <li>独立扩缩容，资源利用率更高，避免互相干扰</li>
+        </ul>
+        <div class="tip">代表论文：Distserve / Splitwise / TetriInfer —— 均验证了分离部署可显著降低 P99 延迟和成本。</div>
+        <p><strong>KV Cache 传输：</strong></p>
+        <div class="formula">Prefill Node → KV Cache Transfer (NVLink / RDMA) → Decode Node</div>
+        <div class="warn">KV Cache 传输是该架构的瓶颈之一。对于长 context（如 128K tokens），KV Cache 可达数 GB，需要高带宽互联支撑。</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q3 -->
+  <div class="card">
+    <div class="q-num">Q3</div>
+    <div class="q-text">模型蒸馏在 LLM 中的实践？从大模型蒸馏小模型的 pipeline？</div>
+    <div class="q-tags"><span>蒸馏</span><span>Knowledge Distillation</span><span>SFT</span><span>黑盒蒸馏</span></div>
+    <details>
+      <summary class="chevron">显示答案 ▾</summary>
+      <div class="answer-inner">
+        <p><strong>白盒蒸馏（Logit-level）：</strong></p>
+        <ul>
+          <li>Student 拟合 Teacher 的 logits 分布（KD Loss = KL Divergence）</li>
+          <li>需要 Teacher 推理完整前向，成本高</li>
+          <li>保留了 Teacher 的概率分布信息（dark knowledge）</li>
+        </ul>
+        <div class="formula">L_KD = KL(softmax(z_T / τ) || softmax(z_S / τ))，τ 为温度系数</div>
+        <p><strong>黑盒蒸馏（Data-level）：</strong></p>
+        <ul>
+          <li>Teacher 生成高质量回答 → Student 做 SFT</li>
+          <li>Alpaca / Vicuna 等开源模型的核心方法</li>
+          <li>更实用、成本低，但丢失 Teacher 的概率分布信息</li>
+        </ul>
+        <p><strong>实践 Pipeline：</strong></p>
+        <ol>
+          <li>大模型对大量 prompt 生成回答（数据合成）</li>
+          <li>质量过滤（Self-consistency / Reward Model 打分）</li>
+          <li>小模型 SFT 训练</li>
+          <li>（可选）小模型 DPO/RLHF 对齐</li>
+        </ol>
+        <div class="tip">On-Policy 蒸馏：用 Student 当前输出作为 negative sample，Teacher 输出作为 positive sample，构造偏好对进行 DPO 训练，效果优于纯 SFT。</div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>维度</th>
+              <th>白盒蒸馏</th>
+              <th>黑盒蒸馏</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>信息来源</td>
+              <td>Teacher logits</td>
+              <td>Teacher 生成文本</td>
+            </tr>
+            <tr>
+              <td>是否需要 Teacher 参数</td>
+              <td>需要</td>
+              <td>不需要（API 即可）</td>
+            </tr>
+            <tr>
+              <td>成本</td>
+              <td>高（全量前向）</td>
+              <td>低（只需生成）</td>
+            </tr>
+            <tr>
+              <td>信息保留</td>
+              <td>概率分布完整</td>
+              <td>仅 argmax 输出</td>
+            </tr>
+            <tr>
+              <td>代表工作</td>
+              <td>MiniLLM, GKD</td>
+              <td>Alpaca, Vicuna, WizardLM</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q4 -->
+  <div class="card">
+    <div class="q-num">Q4</div>
+    <div class="q-text">硬件选型：GPU / TPU / NPU 在 LLM 推理中的差异？</div>
+    <div class="q-tags"><span>硬件</span><span>GPU</span><span>TPU</span><span>NPU</span><span>推理选型</span></div>
+    <details>
+      <summary class="chevron">显示答案 ▾</summary>
+      <div class="answer-inner">
+        <p><strong>NVIDIA GPU（H100 / A100）：</strong></p>
+        <ul>
+          <li>生态最成熟，CUDA 工具链完善（vLLM、TensorRT-LLM 等）</li>
+          <li>Tensor Core 支持 FP8 / INT8 / FP16</li>
+          <li>H100：989 TFLOPS (FP8)，80GB HBM3，3.35 TB/s 带宽</li>
+        </ul>
+        <p><strong>Google TPU（v5p）：</strong></p>
+        <ul>
+          <li>针对矩阵运算优化，大规模互联（ICI，芯片间高速互联）</li>
+          <li>XLA 编译器自动优化，但灵活性较低</li>
+          <li>优势在大 batch 训练，单卡推理生态弱于 GPU</li>
+        </ul>
+        <p><strong>华为 Ascend NPU（910B）：</strong></p>
+        <ul>
+          <li>自主可控需求驱动</li>
+          <li>Da Vinci 架构，支持 INT8 / FP16</li>
+          <li>生态相对不成熟，算子适配和调试成本较高</li>
+        </ul>
+        <p><strong>选型考虑：</strong></p>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>场景</th>
+              <th>推荐硬件</th>
+              <th>理由</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>推理延迟敏感</td>
+              <td>NVIDIA GPU</td>
+              <td>CUDA 优化成熟，推理框架丰富</td>
+            </tr>
+            <tr>
+              <td>大规模训练</td>
+              <td>Google TPU</td>
+              <td>TCO 可能更低，大规模互联优势</td>
+            </tr>
+            <tr>
+              <td>国产化要求</td>
+              <td>华为 Ascend NPU</td>
+              <td>自主可控，政策合规</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="warn">选型不仅看算力峰值，更要看显存带宽（决定 Decode 速度）、互联带宽（决定并行效率）和软件生态（决定开发效率）。</div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Q5 -->
+  <div class="card">
+    <div class="q-num">Q5</div>
+    <div class="q-text">端侧部署的关键技术？手机/边缘设备跑 LLM 的挑战？</div>
+    <div class="q-tags"><span>端侧部署</span><span>手机LLM</span><span>llama.cpp</span><span>量化</span></div>
+    <details>
+      <summary class="chevron">显示答案 ▾</summary>
+      <div class="answer-inner">
+        <p><strong>核心挑战：</strong></p>
+        <ul>
+          <li>内存限制：手机 6~12GB 总内存，模型 + KV Cache 需要 fit 在有限空间内</li>
+          <li>计算能力有限：手机 GPU/NPU 约 10 TOPS，远低于数据中心卡</li>
+          <li>功耗/散热约束：持续推理会导致降频</li>
+        </ul>
+        <p><strong>关键技术：</strong></p>
+        <ul>
+          <li><strong>激进量化：</strong>INT4 / INT3 甚至 INT2（BitNet 1.58b）</li>
+          <li><strong>小模型设计：</strong>Phi-3-mini / Gemma-2B / Qwen-1.5B</li>
+          <li><strong>推理引擎优化：</strong>llama.cpp / MLC-LLM / ExecuTorch</li>
+          <li><strong>KV Cache 管理：</strong>限制最大 context / 动态 eviction（StreamingLLM）</li>
+        </ul>
+        <p><strong>模型架构优化：</strong></p>
+        <ul>
+          <li>GQA（Grouped Query Attention）减少 KV Cache 占用</li>
+          <li>深窄网络 vs 浅宽网络的取舍 —— 窄网络更适合端侧内存约束</li>
+          <li>知识蒸馏从大模型迁移能力到小模型</li>
+        </ul>
+        <div class="formula">端侧模型内存估算：参数量 × 量化位数 / 8 + KV Cache<br>例：3.8B × 4bit / 8 = 1.9GB 权重 + KV Cache 约 0.5~1GB</div>
+        <div class="tip">典型性能：Phi-3-mini (3.8B) INT4 量化在手机上可达约 15 tokens/s，已可支持实时对话体验。</div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>引擎</th>
+              <th>特点</th>
+              <th>支持平台</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>llama.cpp</td>
+              <td>纯 C/C++，GGUF 格式，社区活跃</td>
+              <td>全平台（iOS/Android/PC/Mac）</td>
+            </tr>
+            <tr>
+              <td>MLC-LLM</td>
+              <td>TVM 编译优化，Vulkan/Metal 后端</td>
+              <td>Android/iOS/Web</td>
+            </tr>
+            <tr>
+              <td>ExecuTorch</td>
+              <td>PyTorch 官方端侧方案</td>
+              <td>iOS/Android</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+</section>
 </main>
 
 <footer>
