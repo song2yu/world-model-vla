@@ -193,7 +193,7 @@
   <p>涵盖 Transformer · 训练范式 · 推理优化 · 视觉生成 · 多模态 · 系统设计 · 强化学习 · 代码题</p>
   <div class="stats">
     <div class="stat"><div class="n">130+</div><div class="label">面试题</div></div>
-    <div class="stat"><div class="n">9</div><div class="label">核心模块</div></div>
+    <div class="stat"><div class="n">10</div><div class="label">核心模块</div></div>
     <div class="stat"><div class="n">2025</div><div class="label">最新版本</div></div>
   </div>
 </header>
@@ -208,6 +208,7 @@
   <a href="#s7">系统设计</a>
   <a href="#s8">代码题</a>
   <a href="#s9">强化学习</a>
+  <a href="#s10">损失函数</a>
 </nav>
 
 <main>
@@ -1707,6 +1708,342 @@
       <tr><td>优势估计</td><td>GAE + Critic</td><td>组内相对排名</td></tr>
     </table>
     <p><strong>DeepSeek-R1 选择 GRPO 的原因：</strong>训练超大模型时省去 Critic 可节省约 50% 显存，同时对数学/代码等有客观验证标准的任务，组内相对奖励信号足够稳定。</p>
+  </div></div>
+</div>
+
+</section>
+
+<!-- ═══════════════════════════════════
+     SECTION 10 — 常用损失函数
+════════════════════════════════════ -->
+<section id="s10">
+<div class="section-title"><span class="section-icon">📐</span>十、常用损失函数公式集</div>
+
+<!-- L1 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L1</div>
+    <div>
+      <div class="q-text">交叉熵损失（Cross-Entropy Loss）</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">分类</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>二分类（Binary Cross-Entropy / BCE）：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{BCE}}=-\frac{1}{N}\sum_{i=1}^{N}\left[y_i\log(\hat{y}_i)+(1-y_i)\log(1-\hat{y}_i)\right]$$</div>
+    <p><strong>多分类（Categorical Cross-Entropy）：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{CE}}=-\frac{1}{N}\sum_{i=1}^{N}\sum_{c=1}^{C}y_{i,c}\log(\hat{y}_{i,c})$$</div>
+    <p>其中 $y_{i,c}$ 为 one-hot 标签，$\hat{y}_{i,c}$ 为 softmax 输出的第 c 类概率。</p>
+    <div class="tip">💡 语言模型预训练的 next-token prediction loss 本质就是逐 token 的交叉熵。</div>
+  </div></div>
+</div>
+
+<!-- L2 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L2</div>
+    <div>
+      <div class="q-text">均方误差损失（MSE Loss）与平均绝对误差（MAE / L1 Loss）</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">回归</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>MSE（L2 Loss）：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{MSE}}=\frac{1}{N}\sum_{i=1}^{N}(y_i-\hat{y}_i)^2$$</div>
+    <p><strong>MAE（L1 Loss）：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{MAE}}=\frac{1}{N}\sum_{i=1}^{N}|y_i-\hat{y}_i|$$</div>
+    <p><strong>Smooth L1 / Huber Loss（结合两者优点）：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{Huber}}=\begin{cases}\frac{1}{2}(y-\hat{y})^2 & |y-\hat{y}|<\delta \\ \delta\cdot(|y-\hat{y}|-\frac{\delta}{2}) & \text{otherwise}\end{cases}$$</div>
+    <table>
+      <tr><th>损失</th><th>对异常值</th><th>梯度特点</th><th>适用场景</th></tr>
+      <tr><td>MSE</td><td>敏感（平方放大）</td><td>误差大时梯度大</td><td>一般回归、扩散模型噪声预测</td></tr>
+      <tr><td>MAE</td><td>鲁棒</td><td>恒定梯度（±1）</td><td>需要稳健回归的场景</td></tr>
+      <tr><td>Huber</td><td>折中</td><td>小误差平滑，大误差截断</td><td>目标检测（Faster R-CNN）</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<!-- L3 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L3</div>
+    <div>
+      <div class="q-text">KL 散度（Kullback-Leibler Divergence）</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">分布</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <div class="formula">$$D_{\text{KL}}(P\|Q)=\sum_{x}P(x)\log\frac{P(x)}{Q(x)}=\mathbb{E}_{P}\left[\log\frac{P(x)}{Q(x)}\right]$$</div>
+    <p>连续形式：</p>
+    <div class="formula">$$D_{\text{KL}}(p\|q)=\int p(x)\log\frac{p(x)}{q(x)}\,dx$$</div>
+    <p><strong>性质：</strong></p>
+    <ul>
+      <li>非对称：$D_{\text{KL}}(P\|Q) \neq D_{\text{KL}}(Q\|P)$</li>
+      <li>非负：$D_{\text{KL}} \geq 0$，等号当且仅当 P=Q</li>
+      <li>不是真正的距离（不满足对称性和三角不等式）</li>
+    </ul>
+    <p><strong>应用：</strong>VAE 的正则项、RLHF/PPO 中的策略约束、知识蒸馏。</p>
+    <div class="tip">💡 VAE 中两个高斯分布的 KL 散度有闭式解：$D_{\text{KL}}(\mathcal{N}(\mu,\sigma^2)\|\mathcal{N}(0,1))=\frac{1}{2}(\mu^2+\sigma^2-\ln\sigma^2-1)$</div>
+  </div></div>
+</div>
+
+<!-- L4 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L4</div>
+    <div>
+      <div class="q-text">对比损失（Contrastive Loss）与 InfoNCE Loss</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">对比学习</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>InfoNCE（CLIP / SimCLR 使用）：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{InfoNCE}}=-\frac{1}{N}\sum_{i=1}^{N}\log\frac{\exp(\mathrm{sim}(z_i, z_i^+)/\tau)}{\sum_{j=1}^{N}\exp(\mathrm{sim}(z_i, z_j)/\tau)}$$</div>
+    <p>其中 $z_i^+$ 为正样本对，$\tau$ 为温度参数，$\mathrm{sim}$ 通常为余弦相似度。</p>
+    <p><strong>Triplet Loss：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{triplet}}=\max(0,\;d(a,p)-d(a,n)+\text{margin})$$</div>
+    <p>其中 a=anchor, p=positive, n=negative, d 为欧氏距离。</p>
+    <p><strong>NT-Xent（Normalized Temperature-scaled Cross Entropy，SimCLR）：</strong></p>
+    <div class="formula">$$\ell_{i,j}=-\log\frac{\exp(\mathrm{sim}(z_i,z_j)/\tau)}{\sum_{k=1}^{2N}\mathbb{1}_{[k\neq i]}\exp(\mathrm{sim}(z_i,z_k)/\tau)}$$</div>
+    <div class="tip">💡 温度 τ 越小，分布越尖锐，模型越注重难负样本；τ 越大越平滑。CLIP 的 τ 是可学习参数。</div>
+  </div></div>
+</div>
+
+<!-- L5 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L5</div>
+    <div>
+      <div class="q-text">Focal Loss（解决类别不平衡）</div>
+      <div class="q-tags"><span class="tag">检测</span><span class="tag">分类</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <div class="formula">$$\mathcal{L}_{\text{focal}}=-\alpha_t(1-p_t)^\gamma\log(p_t)$$</div>
+    <p>其中 $p_t$ 为模型对正确类的预测概率，$\alpha_t$ 为类别权重，$\gamma$ 为聚焦参数（通常取 2）。</p>
+    <p><strong>核心思想：</strong>$(1-p_t)^\gamma$ 调制因子使得<em>易分类样本</em>（$p_t$ 接近 1）的损失被大幅衰减，模型更聚焦于<em>难分类样本</em>。</p>
+    <table>
+      <tr><th>γ 值</th><th>效果</th></tr>
+      <tr><td>γ = 0</td><td>退化为标准交叉熵</td></tr>
+      <tr><td>γ = 2</td><td>当 $p_t=0.9$ 时，loss 衰减 100×</td></tr>
+      <tr><td>γ = 5</td><td>更激进的难样本聚焦</td></tr>
+    </table>
+    <div class="tip">💡 最初由 RetinaNet 提出，用于解决目标检测中前景/背景极度不平衡（1:1000）的问题。</div>
+  </div></div>
+</div>
+
+<!-- L6 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L6</div>
+    <div>
+      <div class="q-text">知识蒸馏损失（Distillation Loss）</div>
+      <div class="q-tags"><span class="tag">蒸馏</span><span class="tag">压缩</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <div class="formula">$$\mathcal{L}_{\text{distill}}=\alpha\cdot T^2\cdot D_{\text{KL}}\!\left(\sigma(z_s/T)\;\|\;\sigma(z_t/T)\right)+(1-\alpha)\cdot\mathcal{L}_{\text{CE}}(y, \hat{y}_s)$$</div>
+    <p>其中：</p>
+    <ul>
+      <li>$z_t$ = Teacher logits，$z_s$ = Student logits</li>
+      <li>$T$ = 温度（通常 2~20），使输出分布更平滑，暴露更多"暗知识"</li>
+      <li>$\sigma$ = softmax 函数</li>
+      <li>$\alpha$ = 平衡软标签与硬标签的权重</li>
+      <li>$T^2$ 因子用于补偿温度升高导致的梯度缩放</li>
+    </ul>
+    <div class="tip">💡 LLM 蒸馏中常用 sequence-level KD：Teacher 生成的完整序列作为 Student 的训练目标。</div>
+  </div></div>
+</div>
+
+<!-- L7 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L7</div>
+    <div>
+      <div class="q-text">扩散模型损失（Diffusion / Score Matching Loss）</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">生成</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>DDPM 简化损失（ε-prediction）：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{simple}}=\mathbb{E}_{t,x_0,\varepsilon}\left[\|\varepsilon-\varepsilon_\theta(x_t,t)\|^2\right]$$</div>
+    <p><strong>v-prediction 变体（Imagen / SD 2.x）：</strong></p>
+    <div class="formula">$$v_t=\sqrt{\bar\alpha_t}\,\varepsilon-\sqrt{1-\bar\alpha_t}\,x_0$$
+$$\mathcal{L}_v=\mathbb{E}_{t,x_0,\varepsilon}\left[\|v_t-v_\theta(x_t,t)\|^2\right]$$</div>
+    <p><strong>Flow Matching 损失：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{FM}}=\mathbb{E}_{t,x_0,x_1}\left[\|v_\theta(x_t,t)-(x_1-x_0)\|^2\right]$$</div>
+    <table>
+      <tr><th>预测目标</th><th>优势</th><th>代表</th></tr>
+      <tr><td>ε（噪声）</td><td>原始 DDPM 方式，实现简单</td><td>SD 1.x, DALL·E 2</td></tr>
+      <tr><td>v（velocity）</td><td>高信噪比时更稳定</td><td>Imagen, SD 2.x</td></tr>
+      <tr><td>x₀（数据）</td><td>直接预测去噪结果</td><td>部分加速采样方法</td></tr>
+      <tr><td>v_θ（速度场）</td><td>Flow Matching，最简洁</td><td>SD3, FLUX, Wan</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<!-- L8 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L8</div>
+    <div>
+      <div class="q-text">GAN 损失函数变体</div>
+      <div class="q-tags"><span class="tag">生成</span><span class="tag">对抗</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>原始 GAN（minimax）：</strong></p>
+    <div class="formula">$$\mathcal{L}_D=-\mathbb{E}_{x\sim p_{\text{data}}}[\log D(x)]-\mathbb{E}_{z\sim p_z}[\log(1-D(G(z)))]$$
+$$\mathcal{L}_G=-\mathbb{E}_{z\sim p_z}[\log D(G(z))]$$</div>
+    <p><strong>WGAN（Wasserstein 距离）：</strong></p>
+    <div class="formula">$$\mathcal{L}_D=\mathbb{E}_{z}[D(G(z))]-\mathbb{E}_{x}[D(x)]$$
+$$\mathcal{L}_G=-\mathbb{E}_{z}[D(G(z))]$$</div>
+    <p><strong>WGAN-GP（梯度惩罚）：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{GP}}=\lambda\,\mathbb{E}_{\hat{x}}\left[(\|\nabla_{\hat{x}}D(\hat{x})\|_2-1)^2\right]$$</div>
+    <p>其中 $\hat{x}$ 为真假样本的随机插值点，$\lambda=10$。</p>
+    <p><strong>Hinge Loss（SAGAN / BigGAN）：</strong></p>
+    <div class="formula">$$\mathcal{L}_D=-\mathbb{E}_x[\min(0, -1+D(x))]-\mathbb{E}_z[\min(0, -1-D(G(z)))]$$
+$$\mathcal{L}_G=-\mathbb{E}_z[D(G(z))]$$</div>
+  </div></div>
+</div>
+
+<!-- L9 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L9</div>
+    <div>
+      <div class="q-text">感知损失（Perceptual Loss / LPIPS）</div>
+      <div class="q-tags"><span class="tag">生成</span><span class="tag">重建</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <div class="formula">$$\mathcal{L}_{\text{perceptual}}=\sum_{l}\frac{1}{C_lH_lW_l}\|\phi_l(x)-\phi_l(\hat{x})\|_2^2$$</div>
+    <p>其中 $\phi_l$ 为预训练网络（VGG/DINO）第 $l$ 层的特征图。</p>
+    <p><strong>LPIPS（Learned Perceptual Image Patch Similarity）：</strong></p>
+    <div class="formula">$$\text{LPIPS}(x,\hat{x})=\sum_l\left\|w_l\odot\left(\hat\phi_l(x)-\hat\phi_l(\hat{x})\right)\right\|_2^2$$</div>
+    <p>$\hat\phi_l$ 为 channel-wise 归一化后的特征，$w_l$ 为学习权重。</p>
+    <p><strong>用途：</strong>VAE decoder 训练、超分辨率、图像修复 —— 比 MSE 更符合人类感知。</p>
+    <div class="tip">💡 Stable Diffusion 的 VAE 训练同时使用 reconstruction loss + perceptual loss + GAN loss（PatchGAN discriminator）。</div>
+  </div></div>
+</div>
+
+<!-- L10 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L10</div>
+    <div>
+      <div class="q-text">DPO / RLHF 偏好学习损失</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">对齐</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>奖励模型（Bradley-Terry）：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{RM}}=-\mathbb{E}\left[\log\sigma\!\left(r_\theta(x,y_w)-r_\theta(x,y_l)\right)\right]$$</div>
+    <p><strong>DPO 损失：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{DPO}}=-\mathbb{E}\left[\log\sigma\!\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)}-\beta\log\frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right)\right]$$</div>
+    <p><strong>PPO Clip 目标：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{PPO}}=-\mathbb{E}_t\left[\min\!\left(r_t(\theta)A_t,\;\text{clip}(r_t(\theta),1{-}\varepsilon,1{+}\varepsilon)A_t\right)\right]$$</div>
+    <p>其中 $r_t(\theta)=\frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{\text{old}}}(a_t|s_t)}$，$A_t$ 为优势函数（GAE 估计）。</p>
+    <div class="tip">💡 GRPO 将 PPO 的 Critic 替换为组内归一化：$A_i = (r_i - \mu_r) / \sigma_r$，显存减半。</div>
+  </div></div>
+</div>
+
+<!-- L11 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L11</div>
+    <div>
+      <div class="q-text">CTC Loss（Connectionist Temporal Classification）</div>
+      <div class="q-tags"><span class="tag">序列</span><span class="tag">语音</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <div class="formula">$$\mathcal{L}_{\text{CTC}}=-\log P(y|x)=-\log\sum_{\pi\in\mathcal{B}^{-1}(y)}\prod_t P(\pi_t|x)$$</div>
+    <p>其中 $\mathcal{B}^{-1}(y)$ 为所有映射到标签序列 y 的合法对齐路径集合（collapse blank + 重复）。</p>
+    <p><strong>核心思想：</strong>允许模型在输入长度 > 输出长度时，自由选择对齐方式，用动态规划（前向-后向算法）高效求和。</p>
+    <p><strong>应用场景：</strong>语音识别（ASR）、OCR 文字识别、手写体识别。</p>
+    <div class="tip">💡 Whisper 等现代 ASR 模型使用 Encoder-Decoder + CE loss 替代了 CTC，但 CTC 仍广泛用于流式识别和非自回归 ASR。</div>
+  </div></div>
+</div>
+
+<!-- L12 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L12</div>
+    <div>
+      <div class="q-text">IoU Loss 系列（目标检测边框回归）</div>
+      <div class="q-tags"><span class="tag">检测</span><span class="tag">回归</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>IoU Loss：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{IoU}}=1-\text{IoU}(B,B^{\text{gt}})=1-\frac{|B\cap B^{\text{gt}}|}{|B\cup B^{\text{gt}}|}$$</div>
+    <p><strong>GIoU（Generalized IoU）：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{GIoU}}=1-\text{IoU}+\frac{|C\setminus(B\cup B^{\text{gt}})|}{|C|}$$</div>
+    <p>$C$ 为包围两个框的最小闭合区域。</p>
+    <p><strong>CIoU（Complete IoU）：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{CIoU}}=1-\text{IoU}+\frac{\rho^2(b,b^{\text{gt}})}{c^2}+\alpha v$$</div>
+    <p>额外考虑中心距离 $\rho$、对角线 $c$、宽高比一致性 $v$。</p>
+    <table>
+      <tr><th>变体</th><th>额外考虑</th><th>代表模型</th></tr>
+      <tr><td>IoU</td><td>—</td><td>基础</td></tr>
+      <tr><td>GIoU</td><td>非重叠区域</td><td>YOLO v3+</td></tr>
+      <tr><td>DIoU</td><td>中心点距离</td><td>—</td></tr>
+      <tr><td>CIoU</td><td>中心距离+宽高比</td><td>YOLO v5/v8</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<!-- L13 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L13</div>
+    <div>
+      <div class="q-text">Label Smoothing Loss</div>
+      <div class="q-tags"><span class="tag">正则</span><span class="tag">分类</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p>将 one-hot 标签 $y$ 替换为平滑标签：</p>
+    <div class="formula">$$y_i^{\text{smooth}}=(1-\epsilon)\cdot y_i+\frac{\epsilon}{C}$$</div>
+    <p>等价于在交叉熵中混合均匀分布：</p>
+    <div class="formula">$$\mathcal{L}_{\text{LS}}=(1-\epsilon)\cdot\mathcal{L}_{\text{CE}}(y,\hat{y})+\epsilon\cdot\mathcal{L}_{\text{CE}}(u,\hat{y})$$</div>
+    <p>其中 $u$ 为均匀分布，$\epsilon$ 通常取 0.1。</p>
+    <p><strong>作用：</strong>防止模型对预测过度自信，提升泛化能力，减少过拟合；原始 Transformer 论文中即使用 label smoothing (ε=0.1)。</p>
+  </div></div>
+</div>
+
+<!-- L14 -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">L14</div>
+    <div>
+      <div class="q-text">Dice Loss / Tversky Loss（分割任务）</div>
+      <div class="q-tags"><span class="tag">分割</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>Dice Loss：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{Dice}}=1-\frac{2\sum_i p_i g_i+\epsilon}{\sum_i p_i+\sum_i g_i+\epsilon}$$</div>
+    <p>其中 $p_i$ 为预测概率，$g_i$ 为 ground truth（0/1）。</p>
+    <p><strong>Tversky Loss（广义 Dice）：</strong></p>
+    <div class="formula">$$\mathcal{L}_{\text{Tversky}}=1-\frac{\sum_i p_i g_i}{\sum_i p_i g_i+\alpha\sum_i p_i(1-g_i)+\beta\sum_i(1-p_i)g_i}$$</div>
+    <p>$\alpha$ 控制假阳性权重，$\beta$ 控制假阴性权重。当 $\alpha=\beta=0.5$ 时退化为 Dice Loss。</p>
+    <p><strong>应用：</strong>医学图像分割（处理前景极小的情况），语义分割中与 CE 联合使用。</p>
   </div></div>
 </div>
 
