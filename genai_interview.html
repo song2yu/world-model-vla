@@ -378,6 +378,918 @@
   </div></div>
 </div>
 
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">8</div>
+    <div>
+      <div class="q-text">FFN（前馈网络）的结构演变？GLU/SwiGLU/GeGLU 是什么？</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">FFN</span><span class="tag">LLaMA</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. 标准 FFN（原始 Transformer）</strong></p>
+    <p>由两层全连接 + 激活函数组成：</p>
+    <div class="formula">
+      $$\text{FFN}(x) = W_2 \cdot \text{ReLU}(W_1 x + b_1) + b_2$$
+    </div>
+    <p>其中 $W_1 \in \mathbb{R}^{d_{ff} \times d}$，$W_2 \in \mathbb{R}^{d \times d_{ff}}$，典型设置 $d_{ff} = 4d$。</p>
+
+    <p><strong>2. GLU（Gated Linear Unit）变体</strong></p>
+    <p>引入门控机制，让网络自适应选择信息通道：</p>
+    <div class="formula">
+      $$\text{FFN}_{\text{GLU}}(x) = (W_1 x \odot \sigma(W_{\text{gate}} x)) \cdot W_2$$
+    </div>
+    <p>其中 $\odot$ 为逐元素乘法，$\sigma$ 为 sigmoid 门控。</p>
+
+    <p><strong>3. SwiGLU（LLaMA / PaLM 使用）</strong></p>
+    <p>将 sigmoid 门替换为 Swish 激活（$\text{Swish}(x) = x \cdot \sigma(x)$）：</p>
+    <div class="formula">
+      $$\text{SwiGLU}(x) = (W_1 x \odot \text{Swish}(W_{\text{gate}} x)) \cdot W_2$$
+    </div>
+
+    <p><strong>4. GeGLU</strong></p>
+    <p>将门控函数换为 GELU：</p>
+    <div class="formula">
+      $$\text{GeGLU}(x) = (W_1 x \odot \text{GELU}(W_{\text{gate}} x)) \cdot W_2$$
+    </div>
+
+    <p><strong>5. 参数量对比</strong></p>
+    <table>
+      <tr><th>变体</th><th>参数矩阵</th><th>参数量</th><th>说明</th></tr>
+      <tr><td>标准 FFN</td><td>$W_1, W_2$</td><td>$2 \times d \times 4d = 8d^2$</td><td>两层全连接</td></tr>
+      <tr><td>GLU/SwiGLU/GeGLU</td><td>$W_1, W_{\text{gate}}, W_2$</td><td>$3 \times d \times \frac{8d}{3} \approx 8d^2$</td><td>三个矩阵，用 $\frac{8d}{3}$ 作中间维度</td></tr>
+    </table>
+    <div class="tip">💡 LLaMA 系列使用 $d_{ff} = \frac{8d}{3}$（向上取整到 256 的倍数），保持与标准 FFN 总参数量一致。</div>
+
+    <p><strong>6. 为什么 GLU 变体更好？</strong></p>
+    <ul>
+      <li><strong>门控机制增强特征选择能力</strong>：gate 分支学习"哪些特征应该通过"</li>
+      <li><strong>更好的梯度流</strong>：相比单一 ReLU，门控可避免 dying neuron</li>
+      <li><strong>实验验证</strong>：Noam Shazeer (2020) 论文 "GLU Variants Improve Transformer" 证明 SwiGLU 在几乎所有任务上优于标准 FFN</li>
+    </ul>
+
+    <pre><code># PyTorch 实现 SwiGLU FFN
+class SwiGLU_FFN(nn.Module):
+    def __init__(self, d_model, d_ff):
+        super().__init__()
+        self.w1 = nn.Linear(d_model, d_ff, bias=False)
+        self.w_gate = nn.Linear(d_model, d_ff, bias=False)
+        self.w2 = nn.Linear(d_ff, d_model, bias=False)
+    
+    def forward(self, x):
+        return self.w2(F.silu(self.w_gate(x)) * self.w1(x))</code></pre>
+
+    <div class="warn">⚠️ 注意：SwiGLU 中 Swish 和 SiLU 是同一个函数 $x \cdot \sigma(x)$，PyTorch 中用 <code>F.silu()</code>。</div>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════ Q9 ═══════════════════════════════════ -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">9</div>
+    <div>
+      <div class="q-text">GQA（Grouped Query Attention）和 MQA（Multi-Query Attention）的详细原理？</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">Attention</span><span class="tag">推理优化</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. MHA（Multi-Head Attention）— 基线</strong></p>
+    <p>$h$ 个独立的 Q/K/V head，每个 head 有独立的投影矩阵：</p>
+    <div class="formula">
+      $$Q_i = xW_i^Q,\quad K_i = xW_i^K,\quad V_i = xW_i^V \quad (i=1,...,h)$$
+    </div>
+
+    <p><strong>2. MQA（Multi-Query Attention）</strong></p>
+    <p>$h$ 个 Q head，但 <em>只有 1 组 K/V</em>（所有 Q head 共享同一组 K 和 V）：</p>
+    <div class="formula">
+      $$Q_i = xW_i^Q,\quad K = xW^K,\quad V = xW^V$$
+    </div>
+    <p>优点：KV Cache 缩小 $h$ 倍。缺点：表达能力下降。</p>
+
+    <p><strong>3. GQA（Grouped Query Attention）</strong></p>
+    <p>$h$ 个 Q head，$g$ 组 K/V（每 $h/g$ 个 Q head 共享一组 K/V）：</p>
+    <div class="formula">
+      $$Q_i = xW_i^Q,\quad K_j = xW_j^K,\quad V_j = xW_j^V \quad (j = \lfloor i \cdot g / h \rfloor)$$
+    </div>
+    <p>GQA 是 MHA（$g = h$）和 MQA（$g = 1$）的泛化。</p>
+
+    <p><strong>4. KV Cache 大小对比</strong></p>
+    <table>
+      <tr><th>方法</th><th>KV Cache 大小（每层）</th><th>典型模型</th></tr>
+      <tr><td>MHA</td><td>$2 \times h \times d_{\text{head}} \times \text{seq}$</td><td>GPT-3, LLaMA-1</td></tr>
+      <tr><td>MQA</td><td>$2 \times 1 \times d_{\text{head}} \times \text{seq}$</td><td>Falcon, PaLM</td></tr>
+      <tr><td>GQA</td><td>$2 \times g \times d_{\text{head}} \times \text{seq}$</td><td>LLaMA-2 70B (g=8)</td></tr>
+    </table>
+    <p><strong>总 KV Cache</strong> = 上述值 × $L$（层数）× batch_size × bytes_per_element</p>
+
+    <p><strong>5. 具体例子</strong></p>
+    <table>
+      <tr><th>模型</th><th>头数 h</th><th>KV 组数 g</th><th>方法</th><th>KV Cache 压缩比</th></tr>
+      <tr><td>LLaMA-2 7B</td><td>32</td><td>32</td><td>MHA</td><td>1×</td></tr>
+      <tr><td>LLaMA-2 70B</td><td>64</td><td>8</td><td>GQA</td><td>8×</td></tr>
+      <tr><td>Falcon-40B</td><td>64</td><td>1</td><td>MQA</td><td>64×</td></tr>
+      <tr><td>Mistral-7B</td><td>32</td><td>8</td><td>GQA</td><td>4×</td></tr>
+    </table>
+
+    <p><strong>6. 从 MHA 转换到 GQA 的方法</strong></p>
+    <p>训练好的 MHA 模型可以通过 <em>mean pooling</em> 将多个 KV head 合并为一组：</p>
+    <div class="formula">
+      $$W_j^K = \frac{1}{h/g} \sum_{i \in \text{group}_j} W_i^K$$
+    </div>
+    <p>合并后继续 fine-tune 一小段即可恢复性能（LLaMA-2 论文方法）。</p>
+
+    <div class="tip">💡 面试要点：GQA 在 quality 和 inference speed 之间取得了最佳平衡，是目前生产级 LLM 的标配方案。</div>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════ Q10 ═══════════════════════════════════ -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">10</div>
+    <div>
+      <div class="q-text">MLA（Multi-head Latent Attention）的原理？DeepSeek-V2/V3 的核心创新？</div>
+      <div class="q-tags"><span class="tag hard">难</span><span class="tag">DeepSeek</span><span class="tag">KV压缩</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. 动机</strong></p>
+    <p>即使使用 GQA，KV Cache 仍然很大。以 LLaMA-2 70B 为例：</p>
+    <div class="formula">
+      $$\text{KV Cache per token} = 2 \times L \times g \times d_{\text{head}} = 2 \times 80 \times 8 \times 128 = 163,840 \text{ 参数}$$
+    </div>
+    <p>MLA 的目标：将 KV Cache 压缩到更小的隐变量，不受 head 数量限制。</p>
+
+    <p><strong>2. 核心思想：低秩压缩</strong></p>
+    <p>将每个 token 的 KV 压缩到一个低维隐变量 $c_t$：</p>
+    <div class="formula">
+      $$c_t = W^{DKV} \cdot h_t \quad \text{其中 } c_t \in \mathbb{R}^{d_c},\; d_c \ll n_h \times d_h$$
+    </div>
+    <p>推理时只需缓存 $c_t$，需要时再解压回完整的 K 和 V：</p>
+    <div class="formula">
+      $$K_t = W^{UK} \cdot c_t, \quad V_t = W^{UV} \cdot c_t$$
+    </div>
+
+    <p><strong>3. 完整流程（DeepSeek-V2）</strong></p>
+    <ol>
+      <li><strong>压缩</strong>：$c_t^{KV} = W^{DKV} h_t$（$d_c = 512$，原始 KV 维度可能是 $n_h \times d_h = 128 \times 128 = 16384$）</li>
+      <li><strong>缓存</strong>：推理时只存 $c_t^{KV}$，大小仅 $d_c$ 维</li>
+      <li><strong>解压</strong>：Attention 计算时 $K = W^{UK} c_t^{KV}$，$V = W^{UV} c_t^{KV}$</li>
+      <li><strong>Q 侧也压缩</strong>：$c_t^Q = W^{DQ} h_t$，$Q = W^{UQ} c_t^Q$（但 Q 不需要缓存）</li>
+    </ol>
+
+    <p><strong>4. RoPE 兼容问题与 Decoupled RoPE</strong></p>
+    <p>RoPE 需要作用在 K 上，但压缩后的 $c_t$ 无法直接应用 RoPE。DeepSeek 的解决方案：</p>
+    <div class="formula">
+      $$K_t = [W^{UK} c_t^{KV} ;\; \text{RoPE}(W^{KR} h_t)]$$
+    </div>
+    <p>即额外学习一个小的 $W^{KR}$ 投影（维度很小，如 64），专门承载位置信息。缓存时额外存储这个 RoPE 部分。</p>
+
+    <p><strong>5. 对比 GQA vs MLA</strong></p>
+    <table>
+      <tr><th>维度</th><th>GQA</th><th>MLA</th></tr>
+      <tr><td>压缩方式</td><td>共享 KV head（离散分组）</td><td>低秩投影（连续压缩）</td></tr>
+      <tr><td>压缩比灵活性</td><td>受 $g$ 限制（g=1,2,4,8...）</td><td>$d_c$ 可连续调节</td></tr>
+      <tr><td>缓存大小/token/层</td><td>$2 \times g \times d_h$</td><td>$d_c + d_{\text{rope}}$</td></tr>
+      <tr><td>DeepSeek-V2 实际</td><td>—</td><td>$512 + 64 = 576$（vs MHA 的 16384）</td></tr>
+      <tr><td>表达能力</td><td>受限于 group 粒度</td><td>更高（低秩近似全 KV）</td></tr>
+    </table>
+
+    <div class="tip">💡 MLA 使 DeepSeek-V2 的 KV Cache 仅为 MHA 的 ~3.5%，同时保持了接近 MHA 的质量。</div>
+    <div class="warn">⚠️ 面试追问：MLA 的额外计算成本在解压 $W^{UK}, W^{UV}$，但这可以被高效 kernel 优化（矩阵乘法 vs 内存读取 trade-off）。</div>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════ Q11 ═══════════════════════════════════ -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">11</div>
+    <div>
+      <div class="q-text">Attention 的变体：Sliding Window、Dilated、Cross Attention 的区别和用途？</div>
+      <div class="q-tags"><span class="tag">Attention</span><span class="tag">Mistral</span><span class="tag">效率</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. Full Attention（标准自注意力）</strong></p>
+    <div class="formula">
+      $$\text{Attn}(Q,K,V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V \quad \text{复杂度 } O(n^2)$$
+    </div>
+    <p>每个 token 关注序列中所有其他 token。适合短序列，但长序列成本极高。</p>
+
+    <p><strong>2. Sliding Window Attention（Mistral/Longformer）</strong></p>
+    <p>每个 token 只关注其前后 $W$ 个 token：</p>
+    <div class="formula">
+      $$\text{Attn}_i = \text{softmax}\left(\frac{Q_i K_{[i-W:i]}^T}{\sqrt{d_k}}\right) V_{[i-W:i]} \quad \text{复杂度 } O(n \times W)$$
+    </div>
+    <p>信息可通过多层传播：$L$ 层后的有效感受野 = $L \times W$。</p>
+
+    <p><strong>3. Dilated Attention</strong></p>
+    <p>间隔采样关注位置（类似空洞卷积），扩大感受野而不增加计算：</p>
+    <div class="formula">
+      $$\text{关注位置} = \{i - d, i - 2d, i - 3d, ...\} \quad (d = \text{dilation rate})$$
+    </div>
+    <p>可与 sliding window 组合使用（Longformer 策略）。</p>
+
+    <p><strong>4. Cross Attention</strong></p>
+    <p>Q 来自一个序列（decoder），K/V 来自另一个序列（encoder）：</p>
+    <div class="formula">
+      $$Q = H_{\text{dec}} W^Q, \quad K = H_{\text{enc}} W^K, \quad V = H_{\text{enc}} W^V$$
+    </div>
+    <p>用途：Encoder-Decoder 架构（T5、BART）、多模态（图像 token → 文本 decoder）。</p>
+
+    <p><strong>5. Prefix Attention（Prefix Tuning）</strong></p>
+    <p>前 $p$ 个 prefix token 可被所有位置看到（不受 causal mask 限制），实现 soft prompt：</p>
+    <div class="formula">
+      $$\text{Mask}[i][j] = \begin{cases} 1 & j \leq p \text{ (prefix)} \\ 1 & j \leq i \text{ (causal)} \\ 0 & \text{otherwise} \end{cases}$$
+    </div>
+
+    <p><strong>6. 全面对比</strong></p>
+    <table>
+      <tr><th>Attention 类型</th><th>复杂度</th><th>感受野</th><th>典型模型</th><th>适用场景</th></tr>
+      <tr><td>Full</td><td>$O(n^2)$</td><td>全局</td><td>GPT-3, LLaMA</td><td>短/中等序列</td></tr>
+      <tr><td>Sliding Window</td><td>$O(n \cdot W)$</td><td>局部 $W$</td><td>Mistral, Longformer</td><td>长序列</td></tr>
+      <tr><td>Dilated</td><td>$O(n \cdot W/d)$</td><td>$W \times d$</td><td>Longformer (global+local)</td><td>超长文档</td></tr>
+      <tr><td>Cross</td><td>$O(n \cdot m)$</td><td>全局跨序列</td><td>T5, Flamingo</td><td>Enc-Dec / 多模态</td></tr>
+      <tr><td>Prefix</td><td>$O(n^2)$</td><td>prefix 全局</td><td>Prefix Tuning</td><td>高效微调</td></tr>
+      <tr><td>Sparse (BigBird)</td><td>$O(n \cdot \sqrt{n})$</td><td>局部+全局+随机</td><td>BigBird</td><td>长文档理解</td></tr>
+    </table>
+
+    <div class="tip">💡 Mistral 的实现技巧：用 sliding window + KV cache rolling buffer，超过窗口的 KV 自动丢弃，显存恒定。</div>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════ Q12 ═══════════════════════════════════ -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">12</div>
+    <div>
+      <div class="q-text">Transformer 中的激活函数演变？ReLU → GELU → Swish → SiLU？</div>
+      <div class="q-tags"><span class="tag">激活函数</span><span class="tag">原理</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. ReLU（Rectified Linear Unit）</strong></p>
+    <div class="formula">
+      $$\text{ReLU}(x) = \max(0, x)$$
+    </div>
+    <ul>
+      <li>优点：计算简单，无梯度消失（正区间）</li>
+      <li>缺点：<em>dying neuron</em> 问题 — 一旦输入为负，梯度永远为 0，神经元"死亡"</li>
+    </ul>
+
+    <p><strong>2. GELU（Gaussian Error Linear Unit）</strong></p>
+    <div class="formula">
+      $$\text{GELU}(x) = x \cdot \Phi(x) = x \cdot \frac{1}{2}\left[1 + \text{erf}\left(\frac{x}{\sqrt{2}}\right)\right]$$
+    </div>
+    <p>近似公式（实际使用）：</p>
+    <div class="formula">
+      $$\text{GELU}(x) \approx 0.5x\left(1 + \tanh\left[\sqrt{\frac{2}{\pi}}\left(x + 0.044715x^3\right)\right]\right)$$
+    </div>
+    <p>直觉：用概率（标准正态 CDF）来"软性截断"输入，越大的输入越可能通过。</p>
+
+    <p><strong>3. Swish / SiLU（Sigmoid Linear Unit）</strong></p>
+    <div class="formula">
+      $$\text{Swish}(x) = \text{SiLU}(x) = x \cdot \sigma(x) = \frac{x}{1 + e^{-x}}$$
+    </div>
+    <p>自门控（self-gating）：输入本身决定自己的通过程度。</p>
+
+    <p><strong>4. 性质对比</strong></p>
+    <table>
+      <tr><th>性质</th><th>ReLU</th><th>GELU</th><th>SiLU/Swish</th></tr>
+      <tr><td>平滑性</td><td>不平滑（0 处不可导）</td><td>平滑</td><td>平滑</td></tr>
+      <tr><td>负区间输出</td><td>恒为 0</td><td>接近 0（非零）</td><td>接近 0（可为负）</td></tr>
+      <tr><td>梯度</td><td>阶跃函数</td><td>连续</td><td>连续</td></tr>
+      <tr><td>计算成本</td><td>最低</td><td>中等</td><td>中等</td></tr>
+      <tr><td>Dying neuron</td><td>有</td><td>无</td><td>无</td></tr>
+    </table>
+
+    <p><strong>5. 为什么 GELU/SiLU 更好？</strong></p>
+    <ul>
+      <li><strong>平滑非零梯度</strong>：负输入区域仍有微小梯度，避免 dying neuron</li>
+      <li><strong>概率化截断</strong>：不是硬截断（ReLU），而是软性选择</li>
+      <li><strong>自门控特性</strong>（SiLU）：自动根据输入大小调整通过率</li>
+      <li><strong>实验验证</strong>：在大规模预训练中始终优于 ReLU</li>
+    </ul>
+
+    <p><strong>6. 各模型使用情况</strong></p>
+    <table>
+      <tr><th>模型</th><th>激活函数</th><th>位置</th></tr>
+      <tr><td>原始 Transformer</td><td>ReLU</td><td>FFN</td></tr>
+      <tr><td>BERT / GPT-2</td><td>GELU</td><td>FFN</td></tr>
+      <tr><td>GPT-3</td><td>GELU</td><td>FFN</td></tr>
+      <tr><td>LLaMA / LLaMA-2/3</td><td>SiLU (in SwiGLU)</td><td>FFN gate</td></tr>
+      <tr><td>PaLM</td><td>SiLU (in SwiGLU)</td><td>FFN gate</td></tr>
+      <tr><td>Mistral / Mixtral</td><td>SiLU (in SwiGLU)</td><td>FFN gate</td></tr>
+      <tr><td>Gemma</td><td>GELU (in GeGLU)</td><td>FFN gate</td></tr>
+    </table>
+
+    <div class="tip">💡 现代 LLM 基本不再单独用 ReLU，而是搭配 GLU 结构使用 SiLU 或 GELU 作为门控函数。</div>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════ Q13 ═══════════════════════════════════ -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">13</div>
+    <div>
+      <div class="q-text">Transformer 的参数量和 FLOPs 如何计算？</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">工程</span><span class="tag">计算</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. 参数量公式（Decoder-Only，如 LLaMA）</strong></p>
+
+    <p><em>Embedding 层：</em></p>
+    <div class="formula">
+      $$P_{\text{embed}} = V \times d$$
+    </div>
+    <p>其中 $V$ 为词表大小，$d$ 为隐藏维度。</p>
+
+    <p><em>每层 Attention：</em></p>
+    <div class="formula">
+      $$P_{\text{attn}} = 4 \times d^2 \quad \text{(Q/K/V/O 四个投影矩阵各 } d \times d\text{)}$$
+    </div>
+    <p>若使用 GQA（$g$ 组 KV），则：$P_{\text{attn}} = d^2 + 2 \times g \times d_h \times d + d^2 = 2d^2 + 2gd_h d$</p>
+
+    <p><em>每层 FFN（SwiGLU）：</em></p>
+    <div class="formula">
+      $$P_{\text{ffn}} = 3 \times d \times d_{ff} \quad \text{(三个矩阵: } W_1, W_{\text{gate}}, W_2\text{)}$$
+    </div>
+
+    <p><em>每层 RMSNorm：</em></p>
+    <div class="formula">
+      $$P_{\text{norm}} = 2d \quad \text{(两个 RMSNorm，各 } d \text{ 参数)}$$
+    </div>
+
+    <p><em>总参数量（简化，$d_{ff} = 4d$，标准 FFN）：</em></p>
+    <div class="formula">
+      $$P_{\text{total}} \approx Vd + L \times (4d^2 + 2 \times d \times 4d) = Vd + 12Ld^2$$
+    </div>
+    <p>对于大模型，Embedding 占比很小，<strong>总参数 ≈ $12Ld^2$</strong>。</p>
+
+    <p><strong>2. FLOPs 公式</strong></p>
+    <p><em>每 token 前向 FLOPs：</em></p>
+    <div class="formula">
+      $$\text{FLOPs}_{\text{forward}} \approx 2N \quad \text{(N = 参数量)}$$
+    </div>
+    <p>直觉：每个参数做一次乘法和一次加法 ≈ 2 FLOPs。</p>
+
+    <p><em>训练总 FLOPs（前向 + 反向 + 激活重计算）：</em></p>
+    <div class="formula">
+      $$\text{FLOPs}_{\text{train}} \approx 6ND$$
+    </div>
+    <p>其中 $N$ = 参数量，$D$ = 训练 token 数。系数 6 = 前向(2) + 反向(4)。</p>
+
+    <p><strong>3. 具体例子：LLaMA 系列</strong></p>
+    <table>
+      <tr><th>模型</th><th>$d$</th><th>$L$</th><th>$h$</th><th>$d_{ff}$</th><th>总参数量</th><th>训练 token</th><th>训练 FLOPs</th></tr>
+      <tr><td>LLaMA-7B</td><td>4096</td><td>32</td><td>32</td><td>11008</td><td>6.7B</td><td>1T</td><td>~4×10²² </td></tr>
+      <tr><td>LLaMA-13B</td><td>5120</td><td>40</td><td>40</td><td>13824</td><td>13B</td><td>1T</td><td>~7.8×10²²</td></tr>
+      <tr><td>LLaMA-70B</td><td>8192</td><td>80</td><td>64</td><td>28672</td><td>70B</td><td>2T</td><td>~8.4×10²³</td></tr>
+    </table>
+
+    <p><strong>4. 参数分布（以 LLaMA-7B 为例）</strong></p>
+    <table>
+      <tr><th>组件</th><th>参数量</th><th>占比</th></tr>
+      <tr><td>Token Embedding</td><td>32000 × 4096 = 131M</td><td>~2%</td></tr>
+      <tr><td>Attention (所有层)</td><td>32 × 4 × 4096² = 2.1B</td><td>~32%</td></tr>
+      <tr><td>FFN (所有层)</td><td>32 × 3 × 4096 × 11008 = 4.3B</td><td>~65%</td></tr>
+      <tr><td>RMSNorm + lm_head</td><td>~131M</td><td>~2%</td></tr>
+    </table>
+
+    <div class="tip">💡 FFN 占据了约 2/3 的参数量！这也是为什么 MoE（混合专家）主要作用在 FFN 层。</div>
+    <div class="warn">⚠️ 面试常见追问："7B 模型 FP16 需要多少显存？" 答：7B × 2 bytes = 14 GB（仅模型权重）。</div>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════ Q14 ═══════════════════════════════════ -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">14</div>
+    <div>
+      <div class="q-text">Embedding 层的设计：Tied Embeddings、Rotary Embedding 应用位置？</div>
+      <div class="q-tags"><span class="tag">Embedding</span><span class="tag">设计</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. Word Embedding + Position Embedding</strong></p>
+    <p>原始 Transformer 使用加法组合：</p>
+    <div class="formula">
+      $$h_0 = \text{WordEmbed}(x) + \text{PosEmbed}(pos)$$
+    </div>
+    <p>其中 Word Embedding 为可学习的 $V \times d$ 矩阵，Position Embedding 有两种：</p>
+    <ul>
+      <li><strong>绝对位置编码</strong>（正弦/余弦 或 可学习）：加到 input embedding 上</li>
+      <li><strong>相对位置编码</strong>（RoPE、ALiBi）：注入到 attention 计算中</li>
+    </ul>
+
+    <p><strong>2. Tied Embeddings（权重绑定）</strong></p>
+    <p>输入 Token Embedding（$W_E$）和输出 lm_head（$W_{LM}$）共享权重：</p>
+    <div class="formula">
+      $$\text{logits} = h_L \cdot W_E^T \quad \text{(而非独立的 } W_{LM}\text{)}$$
+    </div>
+    <p><strong>为什么 Tie？</strong></p>
+    <ul>
+      <li>$W_E$：token → 向量空间（编码语义）</li>
+      <li>$W_{LM}$：向量空间 → token 概率（解码语义）</li>
+      <li>两者本质都是 token ↔ 向量空间的映射，共享可减少参数且正则化</li>
+    </ul>
+    <p>节省参数量：$V \times d$（如 32000 × 4096 = 131M）。</p>
+
+    <p><strong>3. LLaMA 为什么不 Tie？</strong></p>
+    <ul>
+      <li>vocab 扩展时输入/输出可能需要不同维度</li>
+      <li>Untied 给予两端独立学习能力，可能提升性能</li>
+      <li>大模型中 embedding 参数占比很小（~2%），节省不明显</li>
+      <li>部分实验表明 untied 在大规模预训练中效果更好</li>
+    </ul>
+
+    <table>
+      <tr><th>模型</th><th>是否 Tied</th><th>说明</th></tr>
+      <tr><td>BERT / GPT-2</td><td>✅ Tied</td><td>经典做法，节省参数</td></tr>
+      <tr><td>T5</td><td>✅ Tied</td><td>Encoder-Decoder 共享</td></tr>
+      <tr><td>LLaMA 1/2/3</td><td>❌ Untied</td><td>独立 lm_head</td></tr>
+      <tr><td>Mistral</td><td>❌ Untied</td><td>同 LLaMA</td></tr>
+      <tr><td>Qwen-2</td><td>✅ Tied</td><td>节省参数</td></tr>
+      <tr><td>Gemma</td><td>✅ Tied</td><td>Google 风格</td></tr>
+    </table>
+
+    <p><strong>4. RoPE 的应用位置</strong></p>
+    <p>RoPE 不作用在 embedding 层，而是在每层 attention 的 Q 和 K 上：</p>
+    <div class="formula">
+      $$Q_m' = R_m Q_m, \quad K_n' = R_n K_n$$
+    </div>
+    <p>这样 $Q_m'^T K_n' = Q_m^T R_m^T R_n K_n = Q_m^T R_{n-m} K_n$，自动编码相对位置 $n-m$。</p>
+
+    <p><strong>5. Token Embedding 的初始化策略</strong></p>
+    <ul>
+      <li>标准正态 $\mathcal{N}(0, 0.02^2)$（GPT-2 style）</li>
+      <li>均匀分布 $U(-\sqrt{1/d}, \sqrt{1/d})$（PyTorch 默认）</li>
+      <li>截断正态（避免极端值）</li>
+    </ul>
+    <div class="tip">💡 面试要点：Tied embedding 在参数效率和性能间的 trade-off 取决于模型规模和 vocab 大小。</div>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════ Q15 ═══════════════════════════════════ -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">15</div>
+    <div>
+      <div class="q-text">Transformer 训练中的学习率调度策略有哪些？</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">训练</span><span class="tag">优化</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. Warmup + Cosine Decay（最主流）</strong></p>
+    <div class="formula">
+      $$\text{lr}(t) = \begin{cases} \text{lr}_{\max} \times \frac{t}{T_{\text{warmup}}} & t \leq T_{\text{warmup}} \\ \text{lr}_{\min} + \frac{\text{lr}_{\max} - \text{lr}_{\min}}{2}\left(1 + \cos\left(\frac{\pi (t - T_{\text{warmup}})}{T - T_{\text{warmup}}}\right)\right) & t > T_{\text{warmup}} \end{cases}$$
+    </div>
+
+    <p><strong>2. Warmup + Linear Decay</strong></p>
+    <div class="formula">
+      $$\text{lr}(t) = \text{lr}_{\max} \times \left(1 - \frac{t - T_{\text{warmup}}}{T - T_{\text{warmup}}}\right) \quad \text{for } t > T_{\text{warmup}}$$
+    </div>
+    <p>简单但效果略逊于 cosine。GPT-3 论文使用此方案。</p>
+
+    <p><strong>3. WSD（Warmup-Stable-Decay）— DeepSeek-V3</strong></p>
+    <p>三阶段策略：</p>
+    <div class="formula">
+      $$\text{lr}(t) = \begin{cases} \text{lr}_{\max} \times \frac{t}{T_w} & \text{Phase 1: Warmup (}t \leq T_w\text{)} \\ \text{lr}_{\max} & \text{Phase 2: Stable (}T_w < t \leq T_s\text{)} \\ \text{lr}_{\max} \times (1 - \frac{t - T_s}{T_d - T_s})^2 & \text{Phase 3: Decay (}t > T_s\text{)} \end{cases}$$
+    </div>
+    <p>优势：Stable 阶段可灵活延长训练而无需预先确定总步数。</p>
+
+    <p><strong>4. Warmup 的必要性</strong></p>
+    <ul>
+      <li>初始阶段参数随机，梯度方向不稳定且范数大</li>
+      <li>大 lr + 不稳定梯度 → loss spike → 训练崩溃</li>
+      <li>Warmup 让模型先"热身"，参数进入合理区域后再用全力学习</li>
+      <li>Adam 优化器的二阶矩估计需要几步才能稳定</li>
+    </ul>
+
+    <p><strong>5. 典型超参数</strong></p>
+    <table>
+      <tr><th>超参</th><th>典型值</th><th>说明</th></tr>
+      <tr><td>Warmup steps</td><td>2000</td><td>约为总步数的 0.1%-1%</td></tr>
+      <tr><td>Peak lr</td><td>3×10⁻⁴</td><td>AdamW，取决于模型大小</td></tr>
+      <tr><td>Min lr</td><td>peak/10 = 3×10⁻⁵</td><td>Cosine 最低点</td></tr>
+      <tr><td>Weight decay</td><td>0.1</td><td>LLaMA 标配</td></tr>
+      <tr><td>Adam β</td><td>(0.9, 0.95)</td><td>LLM 常用</td></tr>
+    </table>
+
+    <p><strong>6. Batch Size Warmup 与 LR Warmup 的关系</strong></p>
+    <ul>
+      <li>有些训练先用小 batch 再逐步增大（batch size warmup）</li>
+      <li>效果类似 lr warmup：初期低有效学习率 = 小 batch × 低 lr</li>
+      <li>可以减少初期浪费的计算（小 batch 少算 token，但梯度方差大）</li>
+      <li>DeepSeek-V3 使用 batch size 从 3072 → 15360 逐步增加</li>
+    </ul>
+
+    <pre><code># PyTorch CosineAnnealingWarmRestarts with Warmup
+from torch.optim.lr_scheduler import LambdaLR
+import math
+
+def get_cosine_schedule_with_warmup(optimizer, warmup_steps, total_steps, min_lr_ratio=0.1):
+    def lr_lambda(step):
+        if step < warmup_steps:
+            return step / warmup_steps
+        progress = (step - warmup_steps) / (total_steps - warmup_steps)
+        return min_lr_ratio + (1 - min_lr_ratio) * 0.5 * (1 + math.cos(math.pi * progress))
+    return LambdaLR(optimizer, lr_lambda)</code></pre>
+
+    <div class="warn">⚠️ 注意：lr 过大的症状 = loss spike / NaN；lr 过小的症状 = loss 下降过慢 / 欠拟合。</div>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════ Q16 ═══════════════════════════════════ -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">16</div>
+    <div>
+      <div class="q-text">Dropout 在现代 LLM 中还用吗？为什么 LLaMA 去掉了 Dropout？</div>
+      <div class="q-tags"><span class="tag">正则化</span><span class="tag">LLaMA</span><span class="tag">训练</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. 原始 Transformer 中的 Dropout</strong></p>
+    <p>Vaswani et al. (2017) 在三个位置使用 dropout（rate = 0.1）：</p>
+    <ul>
+      <li><strong>Attention dropout</strong>：softmax 后的注意力权重</li>
+      <li><strong>FFN dropout</strong>：FFN 隐藏层激活后</li>
+      <li><strong>Residual dropout</strong>：残差连接中子层输出加回前</li>
+    </ul>
+    <div class="formula">
+      $$\text{output} = x + \text{Dropout}(\text{SubLayer}(x))$$
+    </div>
+
+    <p><strong>2. 现代大模型为什么去掉 Dropout？</strong></p>
+    <table>
+      <tr><th>原因</th><th>解释</th></tr>
+      <tr><td>数据量极大</td><td>训练数据 1-15T tokens，模型只见过一次，过拟合风险极低</td></tr>
+      <tr><td>BF16 数值问题</td><td>Dropout mask 的随机性与混合精度训练的数值精度冲突</td></tr>
+      <tr><td>训练不稳定</td><td>大模型 + dropout 的随机性组合导致梯度方差过大</td></tr>
+      <tr><td>正则化需求减少</td><td>模型参数量极大时，本身就有隐式正则化效果</td></tr>
+      <tr><td>确定性更好</td><td>去掉后前向计算确定，便于 debug 和复现</td></tr>
+    </table>
+
+    <p><strong>3. 不使用 Dropout 的主流模型</strong></p>
+    <table>
+      <tr><th>模型</th><th>Dropout</th><th>正则化替代</th></tr>
+      <tr><td>GPT-3 (175B)</td><td>❌ 0.0</td><td>Weight decay</td></tr>
+      <tr><td>LLaMA 1/2/3</td><td>❌ 0.0</td><td>Weight decay 0.1</td></tr>
+      <tr><td>Mistral/Mixtral</td><td>❌ 0.0</td><td>Weight decay</td></tr>
+      <tr><td>DeepSeek-V2/V3</td><td>❌ 0.0</td><td>Weight decay + z-loss</td></tr>
+      <tr><td>PaLM</td><td>❌ 0.0</td><td>Weight decay + z-loss</td></tr>
+    </table>
+
+    <p><strong>4. 何时仍然需要 Dropout？</strong></p>
+    <ul>
+      <li><strong>小模型</strong>（<1B）：参数有限，数据可能复用多次</li>
+      <li><strong>数据有限的 fine-tuning</strong>：如只有几千条数据的 SFT，需要防过拟合</li>
+      <li><strong>分类/NLU 微调</strong>：BERT-style 任务，数据远少于模型容量</li>
+      <li>推荐在 LoRA fine-tuning 中使用 dropout（LoRA 论文建议 0.05）</li>
+    </ul>
+
+    <p><strong>5. 替代正则化方法</strong></p>
+    <ul>
+      <li><strong>Weight Decay</strong>：$L_2$ 正则，惩罚大权重，LLM 标配（通常 0.1）</li>
+      <li><strong>Data Augmentation</strong>：更多/更好的数据本身就是最好的正则化</li>
+      <li><strong>Z-loss</strong>：$\lambda \cdot \log^2 Z$，稳定 softmax 的 log partition function</li>
+      <li><strong>Gradient Clipping</strong>：限制梯度范数（间接防止过拟合不稳定）</li>
+    </ul>
+
+    <div class="tip">💡 面试结论：预训练阶段不用 Dropout；微调阶段根据数据量决定（数据少则加 dropout 0.05-0.1）。</div>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════ Q17 ═══════════════════════════════════ -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">17</div>
+    <div>
+      <div class="q-text">Transformer 中残差连接（Residual Connection）的作用和深层分析？</div>
+      <div class="q-tags"><span class="tag">残差</span><span class="tag">梯度</span><span class="tag hard">深入</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. 基本原理</strong></p>
+    <div class="formula">
+      $$y = x + F(x)$$
+    </div>
+    <p>梯度直接从输出流向输入，不经过 $F$：</p>
+    <div class="formula">
+      $$\frac{\partial y}{\partial x} = I + \frac{\partial F(x)}{\partial x}$$
+    </div>
+    <p>即使 $\frac{\partial F}{\partial x} \to 0$，梯度仍有 $I$（恒等项），不会消失。</p>
+
+    <p><strong>2. 深度分析</strong></p>
+
+    <p><em>（a）指数多子网络的集成</em></p>
+    <p>$L$ 层残差网络等价于 $2^L$ 个不同深度子网络的集成（Veit et al., 2016）：</p>
+    <div class="formula">
+      $$y = x + F_1(x) + F_2(x + F_1(x)) + ... \approx \sum_{\text{subset}} \text{各子路径}$$
+    </div>
+    <p>这使得网络对单层删除具有鲁棒性。</p>
+
+    <p><em>（b）Pre-LN + Residual 使各层贡献近似独立</em></p>
+    <div class="formula">
+      $$x_{l+1} = x_l + F_l(\text{LN}(x_l))$$
+    </div>
+    <p>由于 LN 将输入归一化，各层的 $F_l$ 接收的输入量级相似，贡献近似独立。</p>
+
+    <p><em>（c）Identity shortcut 保证梯度下限</em></p>
+    <div class="formula">
+      $$\frac{\partial \mathcal{L}}{\partial x_l} = \frac{\partial \mathcal{L}}{\partial x_L} \cdot \prod_{k=l}^{L-1}\left(I + \frac{\partial F_k}{\partial x_k}\right)$$
+    </div>
+    <p>展开后每一项都包含直连的 $I$ 路径。</p>
+
+    <p><strong>3. Post-LN vs Pre-LN</strong></p>
+    <table>
+      <tr><th>结构</th><th>公式</th><th>特点</th></tr>
+      <tr><td>Post-LN</td><td>$\text{LN}(x + F(x))$</td><td>原始 Transformer；训练不稳定但收敛精度可能更高</td></tr>
+      <tr><td>Pre-LN</td><td>$x + F(\text{LN}(x))$</td><td>LLaMA 等现代模型；训练更稳定，梯度范数更均匀</td></tr>
+    </table>
+    <div class="formula">
+      $$\text{Post-LN: } x_{l+1} = \text{LN}(x_l + F_l(x_l))$$
+      $$\text{Pre-LN: } x_{l+1} = x_l + F_l(\text{LN}(x_l))$$
+    </div>
+
+    <p><strong>4. DeepNet — 训练超深网络（微软，2022）</strong></p>
+    <p>引入 $\alpha$ 缩放因子使 1000 层训练成为可能：</p>
+    <div class="formula">
+      $$x_{l+1} = \alpha \cdot x_l + F_l(x_l)$$
+    </div>
+    <p>其中 $\alpha > 1$（如 $(2L)^{1/4}$），让残差路径占主导，子层贡献被缩小。</p>
+    <p>同时配合 $\beta$-初始化：子层输出权重初始化为 $\beta \cdot \mathcal{N}(0, \sigma^2)$，$\beta < 1$。</p>
+
+    <p><strong>5. 残差在 Transformer 中的应用位置</strong></p>
+    <ul>
+      <li>Attention 子层：$x + \text{Attn}(\text{LN}(x))$</li>
+      <li>FFN 子层：$x + \text{FFN}(\text{LN}(x))$</li>
+      <li>每层两次残差连接，$L$ 层共 $2L$ 次</li>
+    </ul>
+
+    <div class="warn">⚠️ 面试追问："如果删掉残差连接会怎样？" 答：深层梯度迅速消失，训练几乎无法收敛；浅层（2-3层）可能还行，但 32+ 层必须有残差。</div>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════ Q18 ═══════════════════════════════════ -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">18</div>
+    <div>
+      <div class="q-text">Softmax 的数值稳定性问题？实际实现中如何处理？</div>
+      <div class="q-tags"><span class="tag">数值计算</span><span class="tag code">实现</span><span class="tag">FlashAttention</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. 问题：数值溢出</strong></p>
+    <p>朴素 softmax：</p>
+    <div class="formula">
+      $$\text{softmax}(x_i) = \frac{e^{x_i}}{\sum_j e^{x_j}}$$
+    </div>
+    <p>当 $x_i$ 较大时，$e^{x_i}$ 会溢出：</p>
+    <ul>
+      <li>FP16：$e^{11.09} = 65504$（最大值），$x > 11$ 即 overflow → Inf</li>
+      <li>BF16：$e^{88.7}$ 即 overflow</li>
+      <li>FP32：$e^{88.7}$ 即 overflow</li>
+    </ul>
+
+    <p><strong>2. Safe Softmax（标准解决方案）</strong></p>
+    <p>利用 softmax 的平移不变性：$\text{softmax}(x) = \text{softmax}(x - c)$</p>
+    <div class="formula">
+      $$\text{softmax}(x_i) = \frac{e^{x_i - \max(x)}}{\sum_j e^{x_j - \max(x)}}$$
+    </div>
+    <p>减去最大值后，最大指数为 $e^0 = 1$，永远不会 overflow。</p>
+
+    <pre><code># Safe softmax 实现
+def safe_softmax(x):
+    x_max = x.max(dim=-1, keepdim=True).values
+    exp_x = torch.exp(x - x_max)
+    return exp_x / exp_x.sum(dim=-1, keepdim=True)</code></pre>
+
+    <p><strong>3. Online Softmax（FlashAttention 核心算法）</strong></p>
+    <p>传统方法需要三遍扫描：</p>
+    <ol>
+      <li>第一遍：计算 $m = \max(x)$</li>
+      <li>第二遍：计算 $\sum e^{x_i - m}$</li>
+      <li>第三遍：计算 $\frac{e^{x_i - m}}{\sum e^{x_j - m}}$</li>
+    </ol>
+
+    <p><strong>Online Softmax 实现一遍扫描</strong>（Milakov & Gimelshein, 2018）：</p>
+    <div class="formula">
+      $$\text{维护 running } m_j = \max(m_{j-1}, x_j)$$
+      $$\text{维护 running } d_j = d_{j-1} \cdot e^{m_{j-1} - m_j} + e^{x_j - m_j}$$
+    </div>
+    <p>当新块到来时，需要修正之前的结果：</p>
+    <div class="formula">
+      $$O_{\text{new}} = O_{\text{old}} \cdot \frac{e^{m_{\text{old}}}}{e^{m_{\text{new}}}} \cdot \frac{d_{\text{old}}}{d_{\text{new}}} + \frac{e^{x_{\text{new}} - m_{\text{new}}}}{d_{\text{new}}} \cdot V_{\text{new}}$$
+    </div>
+
+    <p><strong>FlashAttention 利用 Online Softmax 实现分块计算：</strong></p>
+    <pre><code># FlashAttention 伪代码（核心循环）
+m_i = -inf   # running max
+l_i = 0      # running sum
+O_i = 0      # running output
+
+for block_j in K_blocks:
+    S_ij = Q_i @ K_j.T / sqrt(d)
+    m_new = max(m_i, S_ij.max())
+    
+    # 修正之前的结果
+    correction = exp(m_i - m_new)
+    l_new = l_i * correction + exp(S_ij - m_new).sum()
+    O_i = O_i * (l_i * correction / l_new) + (exp(S_ij - m_new) / l_new) @ V_j
+    
+    m_i = m_new
+    l_i = l_new</code></pre>
+
+    <p><strong>4. Log-Sum-Exp Trick（loss 计算）</strong></p>
+    <p>计算 $\log \sum e^{x_i}$（如 cross-entropy loss 中的 log-partition）：</p>
+    <div class="formula">
+      $$\log \sum_i e^{x_i} = m + \log \sum_i e^{x_i - m} \quad (m = \max_i x_i)$$
+    </div>
+    <p>避免先算 $\sum e^{x_i}$（可能 overflow）再取 log。</p>
+
+    <div class="tip">💡 FlashAttention 的核心创新不是数学上的新发现，而是将 online softmax 与 GPU SRAM 分块完美结合，避免了对 HBM 的重复读写。</div>
+    <div class="warn">⚠️ 面试要点：attention score 在 FP16 下 $QK^T/\sqrt{d}$ 很容易超过 11（尤其序列长时），safe softmax 是必须的。</div>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════ Q19 ═══════════════════════════════════ -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">19</div>
+    <div>
+      <div class="q-text">Transformer 中的初始化策略？为什么不同层需要不同的初始化？</div>
+      <div class="q-tags"><span class="tag">初始化</span><span class="tag">muP</span><span class="tag hard">深入</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. Xavier / Glorot 初始化（2010）</strong></p>
+    <p>目标：保持前向和反向传播中信号方差不变。</p>
+    <div class="formula">
+      $$W \sim \mathcal{N}\left(0, \frac{2}{\text{fan\_in} + \text{fan\_out}}\right) \quad \text{或均匀 } U\left(-\sqrt{\frac{6}{\text{fan\_in} + \text{fan\_out}}}, \sqrt{\frac{6}{\text{fan\_in} + \text{fan\_out}}}\right)$$
+    </div>
+    <p>适用于线性激活 / tanh / sigmoid。</p>
+
+    <p><strong>2. Kaiming / He 初始化（2015）</strong></p>
+    <p>针对 ReLU 修正（ReLU 会将一半输出置零）：</p>
+    <div class="formula">
+      $$W \sim \mathcal{N}\left(0, \frac{2}{\text{fan\_in}}\right)$$
+    </div>
+    <p>保证每层输出方差 = 输入方差（考虑 ReLU 的因子 2）。</p>
+
+    <p><strong>3. GPT-2 的残差层缩放</strong></p>
+    <p>问题：$L$ 层残差累加后方差增长为 $L$ 倍。解决：</p>
+    <div class="formula">
+      $$W_{\text{output}} \sim \mathcal{N}\left(0, \frac{0.02}{\sqrt{2L}}\right)$$
+    </div>
+    <p>对每层 Attention 和 FFN 的输出投影层（$W_O$ 和 $W_2$）做缩放，使残差路径方差增长被控制。</p>
+
+    <p><strong>4. muP（Maximal Update Parameterization）</strong></p>
+    <p>核心目标：使超参数（尤其学习率）可以从小模型迁移到大模型。</p>
+    <table>
+      <tr><th>参数类型</th><th>标准参数化 (SP)</th><th>muP</th></tr>
+      <tr><td>Embedding</td><td>$\mathcal{N}(0, 1)$</td><td>$\mathcal{N}(0, 1)$（不变）</td></tr>
+      <tr><td>Hidden layers</td><td>$\mathcal{N}(0, 1/d)$</td><td>$\mathcal{N}(0, 1/d)$，lr × $1/d$</td></tr>
+      <tr><td>Output layer</td><td>$\mathcal{N}(0, 1/d)$</td><td>$\mathcal{N}(0, 1/d)$，lr × $1/d$</td></tr>
+      <tr><td>学习率缩放</td><td>所有层相同 lr</td><td>不同层 lr ∝ $1/\text{width}$</td></tr>
+    </table>
+    <p>关键洞察：SP 下最优 lr 随宽度变化；muP 下最优 lr 与宽度无关。</p>
+
+    <p><strong>5. 为什么 Attention 输出层需要特殊初始化？</strong></p>
+    <ul>
+      <li>Attention 输出 + FFN 输出通过残差累加 $2L$ 次</li>
+      <li>如果每次加入的方差都是 $O(1)$，输出方差 = $O(L)$，导致后面层的梯度不稳定</li>
+      <li>解决：输出投影初始化方差 ∝ $1/L$（或 $1/\sqrt{2L}$）</li>
+    </ul>
+
+    <p><strong>6. DeepSeek 的 Zero Init for Output Projection</strong></p>
+    <div class="formula">
+      $$W_O^{(l)} = 0 \quad \text{(初始化为零矩阵)}$$
+    </div>
+    <p>效果：训练初始时每层贡献为 0（$F(x) = 0$），网络退化为恒等映射 $y = x$。随着训练逐渐学习有意义的变换。</p>
+    <p>优势：</p>
+    <ul>
+      <li>初始 loss = 纯 embedding 的 loss（可预测的起点）</li>
+      <li>训练极稳定，不需要复杂的 warmup</li>
+      <li>与 Pre-LN 配合效果最好</li>
+    </ul>
+
+    <p><strong>7. 实践总结</strong></p>
+    <table>
+      <tr><th>模型</th><th>初始化策略</th></tr>
+      <tr><td>GPT-2</td><td>$\mathcal{N}(0, 0.02)$，输出层 $/\sqrt{2L}$</td></tr>
+      <tr><td>LLaMA</td><td>$\mathcal{N}(0, 0.02)$，RMSNorm 初始化为 1</td></tr>
+      <tr><td>DeepSeek-V2</td><td>部分层 zero init</td></tr>
+      <tr><td>Cerebras-GPT (muP)</td><td>宽度自适应初始化 + 自适应 lr</td></tr>
+    </table>
+
+    <div class="tip">💡 面试关键：初始化不只是"让训练开始"，它决定了训练动态的稳定性，尤其对深层和大模型至关重要。</div>
+  </div></div>
+</div>
+
+<!-- ═══════════════════════════════════ Q20 ═══════════════════════════════════ -->
+<div class="card" onclick="toggle(this)">
+  <div class="card-header">
+    <div class="q-num">20</div>
+    <div>
+      <div class="q-text">Transformer 与 RNN/LSTM 的本质区别？为什么 Transformer 取代了 RNN？</div>
+      <div class="q-tags"><span class="tag hot">高频</span><span class="tag">对比</span><span class="tag">Mamba</span></div>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="answer"><div class="answer-inner">
+    <p><strong>1. 并行性</strong></p>
+    <div class="formula">
+      $$\text{RNN: } h_t = f(h_{t-1}, x_t) \quad \text{(严格顺序依赖)}$$
+      $$\text{Transformer: } H = \text{Attn}(X W^Q, X W^K, X W^V) \quad \text{(全序列并行)}$$
+    </div>
+    <p>Transformer 在训练时可以对序列内所有位置同时计算，GPU 利用率极高。</p>
+
+    <p><strong>2. 长距离依赖</strong></p>
+    <ul>
+      <li><strong>RNN</strong>：信息需要通过 $O(n)$ 步传递，梯度指数衰减（vanishing gradient）</li>
+      <li><strong>LSTM</strong>：通过 cell state 缓解，但仍是 $O(n)$ 路径</li>
+      <li><strong>Transformer</strong>：Attention 直接连接任意两个位置，路径长度 $O(1)$</li>
+    </ul>
+    <div class="formula">
+      $$\text{信号传播路径长度: RNN=}O(n), \text{ Transformer=}O(1)$$
+    </div>
+
+    <p><strong>3. 训练效率</strong></p>
+    <table>
+      <tr><th>维度</th><th>RNN/LSTM</th><th>Transformer</th></tr>
+      <tr><td>前向传播</td><td>顺序 $O(n)$ 步</td><td>并行一次完成</td></tr>
+      <tr><td>反向传播</td><td>BPTT 顺序展开</td><td>完全并行</td></tr>
+      <tr><td>GPU 利用率</td><td>低（顺序瓶颈）</td><td>高（矩阵乘法）</td></tr>
+      <tr><td>训练吞吐</td><td>慢 10-100×</td><td>基准</td></tr>
+    </table>
+
+    <p><strong>4. 推理效率（Transformer 的弱点）</strong></p>
+    <table>
+      <tr><th>维度</th><th>RNN/LSTM</th><th>Transformer</th></tr>
+      <tr><td>每步推理计算</td><td>$O(d^2)$（恒定）</td><td>$O(n \cdot d)$（随序列增长）</td></tr>
+      <tr><td>状态大小</td><td>$O(d)$（固定 hidden state）</td><td>$O(n \cdot d)$（KV Cache 线性增长）</td></tr>
+      <tr><td>生成第 n 个 token</td><td>$O(1)$ 额外成本</td><td>$O(n)$ 额外成本</td></tr>
+    </table>
+
+    <p><strong>5. 新一代架构：试图结合两者优势</strong></p>
+
+    <p><em>Mamba (S4/SSM 系列)：</em></p>
+    <div class="formula">
+      $$h_t = \bar{A} h_{t-1} + \bar{B} x_t, \quad y_t = C h_t$$
+    </div>
+    <ul>
+      <li>训练时可以展开为卷积（并行）</li>
+      <li>推理时用递推（$O(1)$ per step，像 RNN）</li>
+      <li>选择性机制（input-dependent $\bar{A}, \bar{B}$）模拟 attention 的动态性</li>
+    </ul>
+
+    <p><em>RWKV：</em></p>
+    <ul>
+      <li>线性 attention 变体 + time decay</li>
+      <li>训练并行（矩阵形式），推理递推（RNN 形式）</li>
+    </ul>
+
+    <p><strong>6. 全面对比表</strong></p>
+    <table>
+      <tr><th>特性</th><th>Transformer</th><th>RNN/LSTM</th><th>SSM (Mamba)</th></tr>
+      <tr><td>训练并行度</td><td>✅ 完全并行</td><td>❌ 顺序</td><td>✅ 卷积并行</td></tr>
+      <tr><td>训练复杂度</td><td>$O(n^2 d)$</td><td>$O(n d^2)$</td><td>$O(n d)$</td></tr>
+      <tr><td>推理每步</td><td>$O(n d)$</td><td>$O(d^2)$</td><td>$O(d^2)$ (状态固定)</td></tr>
+      <tr><td>长距离建模</td><td>✅ 强（$O(1)$ 路径）</td><td>❌ 弱（梯度衰减）</td><td>⚡ 中等（选择性）</td></tr>
+      <tr><td>状态/内存</td><td>$O(n)$ KV Cache</td><td>$O(1)$ hidden state</td><td>$O(1)$ 状态</td></tr>
+      <tr><td>GPU 友好度</td><td>✅ 矩阵乘法</td><td>❌ 循环依赖</td><td>✅ scan/conv</td></tr>
+      <tr><td>In-context learning</td><td>✅ 强</td><td>❌ 弱</td><td>⚡ 有限</td></tr>
+      <tr><td>可解释性</td><td>中（attention map）</td><td>低</td><td>低</td></tr>
+      <tr><td>代表模型</td><td>GPT-4, LLaMA</td><td>ELMo, 旧 NMT</td><td>Mamba-2, Jamba</td></tr>
+    </table>
+
+    <p><strong>7. 为什么 Transformer 最终胜出？</strong></p>
+    <ol>
+      <li><strong>GPU 硬件适配</strong>：矩阵乘法是 GPU 最擅长的操作</li>
+      <li><strong>Scaling Law</strong>：Transformer 的性能随规模可预测地提升</li>
+      <li><strong>In-context Learning</strong>：注意力机制天然支持 few-shot</li>
+      <li><strong>工程生态</strong>：FlashAttention、vLLM 等优化使 Transformer 推理也越来越快</li>
+    </ol>
+
+    <div class="tip">💡 面试关键观点：Transformer 用空间（KV Cache）换时间和质量；Mamba 试图用状态压缩找回 RNN 的内存效率，同时保留训练并行性。目前混合架构（Jamba = Transformer + Mamba）可能是未来方向。</div>
+    <div class="warn">⚠️ 追问："Mamba 能否完全替代 Transformer？" 目前看不能 — 在需要精确 recall 和 in-context learning 的任务上，纯 SSM 仍逊于 Transformer。</div>
+  </div></div>
+</div>
 </section>
 
 <!-- ═══════════════════════════════════
