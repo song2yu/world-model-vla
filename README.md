@@ -34,6 +34,8 @@ The surveys are hosted as interactive HTML pages via GitHub Pages:
 
 **🔗 World Model & VLA:** https://song2yu.github.io/world-model-vla/
 
+**🔗 World Action Model Survey:** https://song2yu.github.io/world-model-vla/world-action-model.html
+
 **🔗 Long Video Understanding with Memory:** https://song2yu.github.io/world-model-vla/long-video-memory.html
 
 **🔗 生成面试题:** https://song2yu.github.io/world-model-vla/genai_interview.html
@@ -50,6 +52,7 @@ No installation required — just open the link in any browser.
 ```
 world-model-vla/
 ├── index.html                          # World Model & VLA Survey (self-contained)
+├── world-action-model.html             # World Action Model Survey (2025–2026)
 ├── lingbot.html                        # LingBot Tech Stack Survey
 ├── long-video-memory.html              # Long Video Understanding with Memory Survey (2019–2026)
 ├── visual-context-compression.html     # Visual context compression (2024–2026)

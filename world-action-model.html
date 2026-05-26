@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Action Model 论文调研 (2025–2026)</title>
+  <style>
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #23273a; --border: #2e3350;
+      --accent: #6366f1; --accent2: #22d3ee; --accent3: #f59e0b; --accent4: #10b981;
+      --text: #e2e8f0; --muted: #94a3b8; --danger:#f87171;
+      --wam:#ec4899; --vla:#4f46e5; --wm:#0891b2; --sim:#059669; --drive:#b45309;
+    }
+    *{box-sizing:border-box;margin:0;padding:0} body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.65;min-height:100vh}
+    header{background:linear-gradient(135deg,#2e1065 0%,#111827 52%,#082f49 100%);border-bottom:1px solid var(--border);padding:52px 32px 40px;text-align:center}
+    header h1{font-size:2.15rem;font-weight:850;background:linear-gradient(90deg,#f0abfc,#22d3ee,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px}
+    header .subtitle{color:var(--muted);font-size:1rem;max-width:920px;margin:0 auto}.meta{display:flex;justify-content:center;gap:12px;margin-top:18px;flex-wrap:wrap}.meta span{background:rgba(35,39,58,.9);border:1px solid var(--border);border-radius:999px;padding:5px 14px;font-size:.82rem;color:var(--muted)}
+    nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;gap:4px;overflow-x:auto;position:sticky;top:0;z-index:100} nav a{color:var(--muted);text-decoration:none;font-size:.88rem;padding:14px 15px;white-space:nowrap;border-bottom:2px solid transparent} nav a:hover{color:var(--text);border-color:var(--accent2)}
+    .container{max-width:1240px;margin:0 auto;padding:34px 24px} section{margin-bottom:52px}.section-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)}.section-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.2rem}.section-header h2{font-size:1.35rem}.lead{font-size:.96rem;color:var(--muted);margin-bottom:18px;max-width:1050px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}.card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:18px}.card h3{font-size:1rem;margin-bottom:8px}.card p,.card li{font-size:.86rem;color:var(--muted)}.card ul{padding-left:18px}.card.wam{border-left:4px solid var(--wam)}.card.wm{border-left:4px solid var(--wm)}.card.vla{border-left:4px solid var(--vla)}.card.sim{border-left:4px solid var(--sim)}.card.drive{border-left:4px solid var(--drive)}
+    .definition{background:linear-gradient(135deg,rgba(236,72,153,.12),rgba(34,211,238,.08));border:1px solid rgba(236,72,153,.35);border-radius:15px;padding:22px;margin:20px 0}.definition strong{color:#f0abfc}.formula{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#0b1020;border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:12px;color:#bae6fd;overflow-x:auto}
+    table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:12px;overflow:hidden;border:1px solid var(--border);margin:16px 0}th,td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top;font-size:.84rem}th{background:var(--surface2);color:var(--accent2);font-weight:700}td{color:var(--muted)}td strong{color:var(--text)}tr:last-child td{border-bottom:none}.tag{display:inline-block;border-radius:999px;padding:2px 8px;font-size:.72rem;color:white;margin:2px 3px 2px 0}.tag.wam{background:var(--wam)}.tag.vla{background:var(--vla)}.tag.wm{background:var(--wm)}.tag.sim{background:var(--sim)}.tag.drive{background:var(--drive)}.tag.diff{background:#7c3aed}.tag.ar{background:#0891b2}.tag.eval{background:#b45309}
+    .timeline{position:relative;padding-left:20px}.timeline:before{content:'';position:absolute;left:5px;top:5px;bottom:5px;width:2px;background:var(--border)}.tl-item{position:relative;margin-bottom:15px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}.tl-item:before{content:'';position:absolute;left:-21px;top:18px;width:10px;height:10px;border-radius:50%;background:var(--accent2)}.tl-item h4{font-size:.95rem;margin-bottom:5px}.tl-item p{font-size:.84rem;color:var(--muted)}
+    .paper-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}.paper-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}.paper-card:hover{border-color:var(--accent2)}.date{font-size:.74rem;color:var(--muted);font-family:monospace;margin-bottom:5px}.paper-card h4{font-size:.93rem;line-height:1.4;margin-bottom:8px}.summary{font-size:.82rem;color:var(--muted);margin-bottom:10px}.links a{color:var(--accent2);text-decoration:none;font-size:.78rem;margin-right:10px}.links a:hover{text-decoration:underline}.insight{border-left:4px solid var(--accent3);background:rgba(245,158,11,.08);padding:14px 16px;border-radius:10px;margin:14px 0;color:var(--muted);font-size:.9rem}.warn{border-left:4px solid var(--danger);background:rgba(248,113,113,.08);padding:14px 16px;border-radius:10px;margin:14px 0;color:var(--muted);font-size:.9rem}
+    footer{text-align:center;color:var(--muted);padding:36px;border-top:1px solid var(--border);font-size:.82rem} a{color:var(--accent2)}
+  </style>
+</head>
+<body>
+<header>
+  <h1>World Action Model 论文调研</h1>
+  <div class="subtitle">从 VLA 到 WAM：让机器人策略同时预测“未来世界会怎样”和“我该如何行动”</div>
+  <div class="meta"><span>2025–2026</span><span>Robotics / Embodied AI</span><span>World Model × VLA × Video Policy</span><span>更新：2026-05</span></div>
+</header>
+<nav>
+  <a href="#definition">定义</a><a href="#taxonomy">分类框架</a><a href="#papers">核心论文</a><a href="#compare">WAM vs VLA</a><a href="#routes">技术路线</a><a href="#benchmarks">评测</a><a href="#trends">趋势判断</a><a href="index.html">← 返回主页</a>
+</nav>
+<div class="container">
+<section id="definition">
+  <div class="section-header"><div class="section-icon" style="background:rgba(236,72,153,.18)">🧠</div><h2>1. 什么是 World Action Model？</h2></div>
+  <p class="lead">World Action Model（WAM，世界动作模型）不是传统意义上的“只预测未来视频”的 world model，也不是“当前观测 → 动作”的 VLA policy。它的关键是把 <strong>world prediction</strong> 与 <strong>action prediction</strong> 合并为一个闭环学习目标。</p>
+  <div class="definition">
+    <p><strong>工作定义：</strong>给定历史观测、语言目标和机器人状态，WAM 联合预测未来世界状态与动作序列。未来视觉状态不是附属可视化，而是动作策略学习物理因果、接触动态和跨具身迁移的密集监督信号。</p>
+    <div class="formula">p(o<sub>t+1:t+H</sub>, a<sub>t:t+H</sub> | o<sub>≤t</sub>, language, robot_state)</div>
+  </div>
+  <div class="grid">
+    <div class="card vla"><h3>VLA：直接策略</h3><p>典型范式是 vision + language + proprioception → action。优点是推理快、任务指令强；缺点是物理泛化和新运动组合往往依赖大量示教。</p></div>
+    <div class="card wm"><h3>World Model：预测世界</h3><p>学习 action-conditioned 或 prompt-conditioned 的未来视觉/状态转移，可用于规划、评估、数据生成，但本身不一定输出可执行动作。</p></div>
+    <div class="card wam"><h3>WAM：动作即世界预测的一部分</h3><p>同时输出未来视频/视觉特征与动作。视频提供 dense physical dynamics，动作提供可执行闭环控制，两者互相正则化。</p></div>
+  </div>
+</section>
+<section id="taxonomy">
+  <div class="section-header"><div class="section-icon" style="background:rgba(34,211,238,.18)">🧭</div><h2>2. Taxonomy：四类 World Action Model</h2></div>
+  <table><thead><tr><th>类别</th><th>核心问题</th><th>代表论文/系统</th><th>动作如何进入模型</th><th>输出</th></tr></thead><tbody>
+    <tr><td><strong>A. Joint Video-Action Policy</strong></td><td>能否用视频生成模型直接做机器人策略？</td><td>DreamZero / WAM, Video Policy, MV-VDP</td><td>动作 token 与视频 latent 联合预测；或用 future heatmap/RGB video 表示动作</td><td>未来视频 + 动作 chunk</td></tr>
+    <tr><td><strong>B. Autoregressive Action World Model</strong></td><td>能否把 VLA 与 world model 放进一个 AR 序列模型？</td><td>WorldVLA, GigaWorld/Gigabrain-0</td><td>图像 token、语言 token、动作 token 共用自回归序列；future image 作为辅助监督</td><td>动作 token + future image</td></tr>
+    <tr><td><strong>C. Action-Conditioned Simulator</strong></td><td>能否生成可控、可交互、可反事实的未来世界？</td><td>GAIA-2, UniSim, Genie 系列, LOME, SAW</td><td>语言、轨迹、控制信号、affordance mask、ego-action 作为条件</td><td>可控未来视频/多视角场景</td></tr>
+    <tr><td><strong>D. World-Model-Augmented Agent/Planner</strong></td><td>能否用 world model 评估动作后果、降低真实试错？</td><td>World-Model-Augmented Web Agents, DriveDreamer/Driving WMs, Dreamer 系列</td><td>动作作为 rollout 条件；策略在 imagined future 中规划/评估</td><td>风险评估、轨迹评分、规划动作</td></tr>
+  </tbody></table>
+</section>
+<section id="papers">
+  <div class="section-header"><div class="section-icon" style="background:rgba(99,102,241,.18)">📚</div><h2>3. 核心论文与系统</h2></div>
+  <div class="paper-grid">
+    <div class="paper-card"><div class="date">2026-02</div><h4>DreamZero: World Action Models are Zero-shot Policies</h4><p class="summary">提出 WAM 概念。基于 14B 预训练视频扩散骨干，联合预测未来视频和机器人动作；真实机器人中对新任务/环境泛化超过 SOTA VLA 2×，并以 7Hz 实时闭环控制运行。</p><span class="tag wam">WAM</span><span class="tag diff">Video Diffusion</span><span class="tag vla">Zero-shot Policy</span><div class="links"><a href="https://arxiv.org/abs/2602.15922">arXiv</a><a href="https://dreamzero0.github.io/">Project</a></div></div>
+    <div class="paper-card"><div class="date">2025-06</div><h4>WorldVLA: Towards Autoregressive Action World Model</h4><p class="summary">将 VLA 与 world model 统一到单一自回归框架：world model 预测未来图像以学习环境物理，action model 基于观测生成后续动作；提出 attention mask 缓解动作自回归误差传播。</p><span class="tag wam">Action World Model</span><span class="tag ar">AR</span><span class="tag vla">VLA</span><div class="links"><a href="https://arxiv.org/abs/2506.21539">arXiv</a><a href="https://github.com/alibaba-damo-academy/WorldVLA">Code</a></div></div>
+    <div class="paper-card"><div class="date">2026-04</div><h4>MV-VDP: Multi-View Video Diffusion Policy</h4><p class="summary">把机器人 3D 状态投影成多视角 RGB/heatmap 视频，使用视频扩散 policy 联合建模未来环境演化与动作。仅 10 条示教即可完成复杂真机任务。</p><span class="tag wam">Video Action Model</span><span class="tag diff">Diffusion Policy</span><span class="tag sim">3D Multi-view</span><div class="links"><a href="https://arxiv.org/abs/2604.03181">arXiv</a><a href="https://lpy1219.github.io/MV-VDP-Web/">Project</a></div></div>
+    <div class="paper-card"><div class="date">2025-08</div><h4>Video Generators are Robot Policies / Video Policy</h4><p class="summary">用视频生成作为机器人 policy 学习代理：先预测目标未来视频或视觉计划，再将其转化为控制动作。代表了“future video as policy”路线。</p><span class="tag wam">Video Policy</span><span class="tag wm">Video Generator</span><div class="links"><a href="https://videopolicy.cs.columbia.edu/assets/video_policy.pdf">PDF</a></div></div>
+    <div class="paper-card"><div class="date">2026-03</div><h4>SAW: Toward a Surgical Action World Model</h4><p class="summary">手术场景 WAM：以语言、参考帧、组织 affordance mask、工具尖端轨迹为轻量条件，扩散生成可控手术动作视频；可增强稀有动作识别和手术模拟。</p><span class="tag wam">Surgical WAM</span><span class="tag diff">Video Diffusion</span><div class="links"><a href="https://arxiv.org/abs/2603.13024">arXiv</a></div></div>
+    <div class="paper-card"><div class="date">2026-03</div><h4>LOME: Action-Conditioned Egocentric World Model</h4><p class="summary">面向人-物操作的第一视角世界模型，给定输入图像、文本提示和逐帧动作/空间控制，生成接触丰富的人物交互视频，为从人类视频学习操作提供桥梁。</p><span class="tag wm">Egocentric WM</span><span class="tag diff">Action-conditioned</span><div class="links"><a href="https://arxiv.org/abs/2603.27449">arXiv</a></div></div>
+    <div class="paper-card"><div class="date">2025-03</div><h4>GAIA-2: Controllable Multi-View Generative World Model</h4><p class="summary">Wayve 的驾驶世界模型，面向自动驾驶多视角可控视频生成；通过高质量 latent diffusion 支持常见与长尾驾驶场景仿真。</p><span class="tag drive">Driving WM</span><span class="tag diff">Latent Diffusion</span><div class="links"><a href="https://arxiv.org/html/2503.20523v1">arXiv HTML</a></div></div>
+    <div class="paper-card"><div class="date">2026-01</div><h4>1X World Model / From Video to Action</h4><p class="summary">1X 将视频预训练世界模型接入 NEO 机器人策略，强调从视频学习物理先验与动作策略，体现工业界“world model as policy”的落地路径。</p><span class="tag wam">Robot Policy</span><span class="tag sim">Industrial</span><div class="links"><a href="https://www.1x.tech/discover/world-model-self-learning">Blog</a></div></div>
+    <div class="paper-card"><div class="date">2023–2026</div><h4>UniSim / Genie 系列 / Interactive World Models</h4><p class="summary">更偏交互式模拟器：从视频或互联网交互数据中学习可操控世界。它们不一定直接输出机器人动作，但为 WAM 提供可交互 world prior。</p><span class="tag sim">Simulator</span><span class="tag wm">Interactive WM</span></div>
+  </div>
+</section>
+<section id="compare">
+  <div class="section-header"><div class="section-icon" style="background:rgba(245,158,11,.18)">⚖️</div><h2>4. WAM vs VLA：根本差异</h2></div>
+  <table><thead><tr><th>维度</th><th>VLA / π0 类</th><th>World Action Model</th></tr></thead><tbody>
+    <tr><td><strong>核心目标</strong></td><td>从当前观测和语言指令直接生成动作</td><td>联合生成未来视觉状态与动作，让动作被物理预测约束</td></tr>
+    <tr><td><strong>监督信号密度</strong></td><td>动作标签稀疏，依赖人工/机器人示教</td><td>视频帧提供 dense dynamics supervision，可利用大量无动作视频</td></tr>
+    <tr><td><strong>泛化瓶颈</strong></td><td>语义泛化强，但未见物理运动/接触泛化弱</td><td>通过视频动态先验学习“how”，更适合跨场景、跨任务、跨具身</td></tr>
+    <tr><td><strong>推理成本</strong></td><td>较低，适合高频控制</td><td>视频扩散/世界 rollout 成本高，需要蒸馏、缓存、短 horizon、系统优化</td></tr>
+    <tr><td><strong>失败模式</strong></td><td>动作看似合理但物理后果不可见</td><td>生成视频可能美化失败、hallucinate 可行动性；需要因果一致和可执行性评测</td></tr>
+  </tbody></table>
+  <div class="insight"><strong>一句话：</strong>VLA 学的是 “what action token should I output now”；WAM 学的是 “if I act this way, what will happen, and which action sequence makes that future likely”。</div>
+</section>
+<section id="routes">
+  <div class="section-header"><div class="section-icon" style="background:rgba(16,185,129,.18)">🧩</div><h2>5. 技术路线拆解</h2></div>
+  <div class="grid">
+    <div class="card wam"><h3>路线 1：视频扩散骨干 → 动作头</h3><ul><li>代表：DreamZero、MV-VDP、SAW、LOME</li><li>优势：物理细节、接触动态、跨 embodiment 视频迁移</li><li>挑战：闭环延迟、长 horizon 漂移、视频真实性 ≠ 可执行性</li></ul></div>
+    <div class="card vla"><h3>路线 2：AR Token 统一建模</h3><ul><li>代表：WorldVLA、Chameleon/Emu3 风格扩展</li><li>优势：图像/语言/动作 token 接口统一，容易 scaling</li><li>挑战：动作 chunk 自回归误差传播，连续控制精度不足</li></ul></div>
+    <div class="card sim"><h3>路线 3：交互式世界模拟器</h3><ul><li>代表：UniSim、Genie、GAIA-2、DriveDreamer</li><li>优势：可反事实、可规划、可生成稀有场景</li><li>挑战：从“看起来对”走向“动力学因果对”仍困难</li></ul></div>
+    <div class="card wm"><h3>路线 4：World Model 辅助 VLA 训练</h3><ul><li>代表：DreamVLA、future-image auxiliary loss、model-based data augmentation</li><li>优势：保留 VLA 低延迟，同时注入物理先验</li><li>挑战：辅助损失权重、负迁移、生成模型偏差</li></ul></div>
+  </div>
+</section>
+<section id="benchmarks">
+  <div class="section-header"><div class="section-icon" style="background:rgba(124,58,237,.18)">📏</div><h2>6. 评测与 Benchmark 关注点</h2></div>
+  <table><thead><tr><th>评测维度</th><th>为什么重要</th><th>推荐指标/实验</th></tr></thead><tbody>
+    <tr><td>真实机器人成功率</td><td>WAM 最终必须闭环控制，不只是视频质量</td><td>Seen / unseen task success、OOD scene、跨物体泛化</td></tr>
+    <tr><td>动作-未来一致性</td><td>未来视频必须反映动作后果</td><td>action-conditioned FVD、contact consistency、trajectory alignment</td></tr>
+    <tr><td>跨具身迁移</td><td>WAM 最大卖点之一是从人类/其他机器人视频迁移</td><td>video-only demo adaptation、few-shot embodiment adaptation</td></tr>
+    <tr><td>长时程稳定性</td><td>世界 rollout 容易漂移、幻觉、物体消失</td><td>multi-step rollout error、object permanence、constraint violation</td></tr>
+    <tr><td>控制频率与延迟</td><td>扩散世界模型必须满足闭环实时性</td><td>Hz、latency、GPU budget、horizon length</td></tr>
+  </tbody></table>
+  <div class="warn"><strong>关键风险：</strong>视频生成指标（FVD/CLIP-score）不能替代 policy 指标。真实控制中最危险的是 world model “美化失败样本”：视频看起来合理，但预测的物理后果与真实动作效果相反。</div>
+</section>
+<section id="trends">
+  <div class="section-header"><div class="section-icon" style="background:rgba(236,72,153,.18)">🚀</div><h2>7. 趋势判断与研究机会</h2></div>
+  <div class="timeline">
+    <div class="tl-item"><h4>阶段 1：VLA 主导（2023–2024）</h4><p>RT-2、OpenVLA、π0 等证明 vision-language-action 能规模化，但核心仍是“观测到动作”的直接映射。</p></div>
+    <div class="tl-item"><h4>阶段 2：World Model 进入机器人（2024–2025）</h4><p>DriveDreamer、GAIA、UniSim、Genie 等让视频生成模型开始承担可控模拟器角色。</p></div>
+    <div class="tl-item"><h4>阶段 3：WAM 融合（2025–2026）</h4><p>WorldVLA、DreamZero、MV-VDP 将动作生成和世界预测合并，形成“视频是策略中间语言”的新范式。</p></div>
+  </div>
+  <div class="grid">
+    <div class="card wam"><h3>机会 1：动作-视频联合 tokenization</h3><p>如何设计同时适合视觉生成和低延迟控制的 token/latent，是 WAM scaling 的底层问题。</p></div>
+    <div class="card wm"><h3>机会 2：可执行性约束的 world model</h3><p>仅生成逼真视频不够，需要把接触、力、几何、机器人运动学约束注入模型或解码器。</p></div>
+    <div class="card vla"><h3>机会 3：VLA + WAM 双系统</h3><p>短 horizon 由 VLA 快速控制，长 horizon 由 WAM 规划/校验，可能比纯 WAM 更现实。</p></div>
+    <div class="card sim"><h3>机会 4：从人类视频到机器人动作</h3><p>DreamZero 展示 video-only demos 的迁移潜力，下一步是更系统的 morphology alignment 与 inverse dynamics。</p></div>
+  </div>
+</section>
+</div>
+<footer>World Action Model Survey · Built for <a href="https://github.com/song2yu/world-model-vla">world-model-vla</a> · 2026-05</footer>
+</body>
+</html>
